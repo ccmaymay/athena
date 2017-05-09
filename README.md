@@ -1,5 +1,7 @@
 # athena
 
+[![Build Status](https://travis-ci.org/cjmay/athena.svg?branch=master)](https://travis-ci.org/cjmay/athena)
+
 Athena is a library and collection of scripts implementing streaming
 embeddings with the space-saving algorithm.  See the accompanying
 manuscript at [arXiv:1704.07463](https://arxiv.org/abs/1704.07463).
