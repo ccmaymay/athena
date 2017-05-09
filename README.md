@@ -29,8 +29,9 @@ As with the athena library and scripts, the athena tests comprise a C++
 component and a Python component.  Most tests are written in C++.
 
 The C++ test suite requires Google Test and Google Mock.  On Linux or
-OS X, install `cmake` and then run the following bash shell code to
-install Google Test and Google Mock:
+OS X, install cmake (e.g., with `sudo yum install cmake` or
+`sudo apt-get install cmake`) and then run the following bash shell
+code to install Google Test and Google Mock:
 
 ```bash
 git clone https://github.com/google/googletest.git && \
