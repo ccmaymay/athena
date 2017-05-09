@@ -17,5 +17,3 @@ gmon.out
 *.so
 .svn
 *.bin
-vgcore.*
-core.*
