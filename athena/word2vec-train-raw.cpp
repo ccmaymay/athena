@@ -13,48 +13,131 @@
 #include <iostream>
 #include <fstream>
 #include <random>
+#include <unistd.h>
 
 
 #define SENTENCE_LIMIT 1000
-#define VOCAB_DIM 7000
-#define RESERVOIR_SIZE 100000000
-#define EMBEDDING_DIM 100
-#define SYMM_CONTEXT 5
-#define NEG_SAMPLES 5
-#define SUBSAMPLE_THRESHOLD 1e-3
-#define TAU 1.7e7
-#define KAPPA 2.5e-2
-#define RHO_LOWER_BOUND 2.5e-6
+#define RHO_LOWER_BOUND_FACTOR 1e-4
 #define PROPAGATE_DISCARDED false
 #define PROPAGATE_RETAINED false
 #define SMOOTHING_EXPONENT 0.75
 #define SMOOTHING_OFFSET 0
+#define RESERVOIR_SIZE 100000000
+
+#define DEFAULT_SYMM_CONTEXT 5
+#define DEFAULT_NEG_SAMPLES 5
+#define DEFAULT_TAU 1.7e7
+#define DEFAULT_KAPPA 2.5e-2
 
 
 using namespace std;
 
+void usage(ostream& s, const string& program) {
+  s << "Train word2vec (SGNS) model from text file.\n";
+  s << "\n";
+  s << "Usage: " << program << " [...] <input-path> <output-path>\n";
+  s << "\n";
+  s << "Required arguments:\n";
+  s << "  <input-path>\n";
+  s << "     Path to input file (training text).\n";
+  s << "  <output-path>\n";
+  s << "     Path to output file (serialized model).\n";
+  s << "\n";
+  s << "Optional arguments:\n";
+  s << "  -v <vocab-dim>\n";
+  s << "     Set vocabulary dimension.\n";
+  s << "     Default: " << DEFAULT_VOCAB_DIM << "\n";
+  s << "  -e <embedding-dim>\n";
+  s << "     Set embedding dimension.\n";
+  s << "     Default: " << DEFAULT_EMBEDDING_DIM << "\n";
+  s << "  -s <subsample-threshold>\n";
+  s << "     Set word subsampling threshold.\n";
+  s << "     Default: " << DEFAULT_SUBSAMPLE_THRESHOLD << "\n";
+  s << "  -n <neg-samples>\n";
+  s << "     Set number of negative samples to draw.\n";
+  s << "     Default: " << DEFAULT_NEG_SAMPLES << "\n";
+  s << "  -c <context>\n";
+  s << "     Set number of words on each side to use as context.\n";
+  s << "     Default: " << DEFAULT_SYMM_CONTEXT << "\n";
+  s << "  -t <tau>\n";
+  s << "     Set learning rate iteration divisor.\n";
+  s << "     Default: " << DEFAULT_TAU << "\n";
+  s << "  -k <kappa>\n";
+  s << "     Set learning rate overall multiplier.\n";
+  s << "     Default: " << DEFAULT_KAPPA << "\n";
+  s << "  -h\n";
+  s << "     Print this help and exit.\n";
+}
+
 int main(int argc, char **argv) {
-  if (argc != 3) {
-    cerr << "usage: " << argv[0] << " <input-path> <output-path>\n";
+  size_t
+    vocab_dim(DEFAULT_VOCAB_DIM),
+    embedding_dim(DEFAULT_EMBEDDING_DIM),
+    neg_samples(DEFAULT_NEG_SAMPLES),
+    symm_context(DEFAULT_SYMM_CONTEXT);
+  float
+    subsample_threshold(DEFAULT_SUBSAMPLE_THRESHOLD),
+    tau(DEFAULT_TAU),
+    kappa(DEFAULT_KAPPA);
+
+  const string program(argv[0]);
+
+  int ret = 0;
+  while (ret != -1) {
+    ret = getopt(argc, argv, "v:e:s:n:c:t:k:h");
+    switch (ret) {
+      case 'v':
+        vocab_dim = stoull(string(optarg));
+        break;
+      case 'e':
+        embedding_dim = stoull(string(optarg));
+        break;
+      case 's':
+        subsample_threshold = stof(string(optarg));
+        break;
+      case 'n':
+        neg_samples = stoull(string(optarg));
+        break;
+      case 'c':
+        symm_context = stoull(string(optarg));
+        break;
+      case 't':
+        tau = stof(string(optarg));
+        break;
+      case 'k':
+        kappa = stof(string(optarg));
+        break;
+      case 'h':
+        usage(cout, program);
+        exit(0);
+      case '?':
+        usage(cerr, program);
+        exit(1);
+      case -1:
+        break;
+    }
+  }
+  if (optind + 2 != argc) {
+    usage(cerr, program);
     exit(1);
   }
-  const char *input_path = argv[1];
-  const char *output_path = argv[2];
+  const char *input_path = argv[optind];
+  const char *output_path = argv[optind + 1];
 
   info(__func__, "seeding random number generator ...\n");
   seed_default();
 
   info(__func__, "initializing model ...\n");
-  auto language_model(make_shared<NaiveLanguageModel>(SUBSAMPLE_THRESHOLD));
+  auto language_model(make_shared<NaiveLanguageModel>(subsample_threshold));
   auto model(make_shared<SGNSModel>(
-    make_shared<WordContextFactorization>(VOCAB_DIM, EMBEDDING_DIM),
+    make_shared<WordContextFactorization>(vocab_dim, embedding_dim),
     make_shared<ReservoirSamplingStrategy>(
       make_shared<ReservoirSampler<long> >(RESERVOIR_SIZE)),
     language_model,
-    make_shared<SGD>(VOCAB_DIM, TAU, KAPPA, RHO_LOWER_BOUND),
-    make_shared<DynamicContextStrategy>(SYMM_CONTEXT),
+    make_shared<SGD>(vocab_dim, tau, kappa, RHO_LOWER_BOUND_FACTOR * kappa),
+    make_shared<DynamicContextStrategy>(symm_context),
     make_shared<SGNSTokenLearner>(),
-    make_shared<SGNSSentenceLearner>(NEG_SAMPLES, PROPAGATE_RETAINED),
+    make_shared<SGNSSentenceLearner>(neg_samples, PROPAGATE_RETAINED),
     make_shared<SubsamplingSGNSSentenceLearner>(PROPAGATE_DISCARDED)
   ));
   model->token_learner->set_model(model);
@@ -68,7 +151,10 @@ int main(int argc, char **argv) {
   stream_ready_or_throw(f);
   while (f) {
     const char c = f.get();
-    if (c == ' ' || c == '\n' || c == '\t' || c == '\r') {
+    if (c == '\r') {
+      continue;
+    }
+    if (c == ' ' || c == '\n' || c == '\t') {
       if (! word.empty()) {
         language_model->increment(word);
         word.clear();
@@ -79,7 +165,7 @@ int main(int argc, char **argv) {
   }
 
   info(__func__, "truncating language model ...\n");
-  language_model->truncate(VOCAB_DIM);
+  language_model->truncate(vocab_dim);
 
   info(__func__, "initializing reservoir ...\n");
   CountNormalizer normalizer(SMOOTHING_EXPONENT, SMOOTHING_OFFSET);
@@ -95,7 +181,10 @@ int main(int argc, char **argv) {
     sentence.clear();
     while (f) {
       const char c = f.get();
-      if (c == ' ' || c == '\n' || c == '\t' || c == '\r') {
+      if (c == '\r') {
+        continue;
+      }
+      if (c == ' ' || c == '\n' || c == '\t') {
         if (! word.empty()) {
           sentence.push_back(word);
           ++words_seen;

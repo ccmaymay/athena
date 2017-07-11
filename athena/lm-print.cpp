@@ -8,32 +8,57 @@
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
+#include <unistd.h>
 
 
 using namespace std;
 
+void usage(ostream& s, const string& program) {
+  s << "Load serialized language model and print its words to a file.\n";
+  s << "\n";
+  s << "Usage: " << program << " [...] <input-path> <output-path>\n";
+  s << "\n";
+  s << "Required arguments:\n";
+  s << "  <input-path>\n";
+  s << "     Path to input file (serialized language model).\n";
+  s << "  <output-path>\n";
+  s << "     Path to output file (text representation of language model).\n";
+  s << "\n";
+  s << "Optional arguments:\n";
+  s << "  -c\n";
+  s << "     Print word count next to each word.\n";
+  s << "  -h\n";
+  s << "     Print this help and exit.\n";
+}
+
 int main(int argc, char **argv) {
-  if (argc != 3 && argc != 4) {
-    cerr << "usage: " << argv[0] << " [--with-counts] <input-path> <output-path>\n";
-    exit(1);
-  }
-  char *input_path = NULL,
-       *output_path = NULL;
-  bool with_counts = false;
-  for (int i = 1; i < argc; ++i) {
-    if (strcmp(argv[i], "--with-counts") == 0) {
-      with_counts = true;
-    } else if (input_path == NULL) {
-      input_path = argv[i];
-    } else if (output_path == NULL) {
-      output_path = argv[i];
-    } else {
-      throw runtime_error(string("main: unexpected argument list"));
+  bool with_counts(false);
+
+  const string program(argv[0]);
+
+  int ret = 0;
+  while (ret != -1) {
+    ret = getopt(argc, argv, "ch");
+    switch (ret) {
+      case 'c':
+        with_counts = true;
+        break;
+      case 'h':
+        usage(cout, program);
+        exit(0);
+      case '?':
+        usage(cerr, program);
+        exit(1);
+      case -1:
+        break;
     }
   }
-  if (input_path == NULL || output_path == NULL) {
-    throw runtime_error(string("main: input-path and output-path must be specified"));
+  if (optind + 2 != argc) {
+    usage(cerr, program);
+    exit(1);
   }
+  const char *input_path = argv[optind];
+  const char *output_path = argv[optind + 1];
 
   info(__func__, "loading model ...\n");
   auto language_model(FileSerializer<LanguageModel>(input_path).load());

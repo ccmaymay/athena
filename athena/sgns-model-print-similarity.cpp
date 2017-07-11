@@ -9,18 +9,53 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <unistd.h>
 
 
 using namespace std;
 
+void usage(ostream& s, const string& program) {
+  s << "Load SGNS model and word pair list and print similarities of word pairs to a file.\n";
+  s << "\n";
+  s << "Usage: " << program << " [...] <input-path> <word-pair-list-path> <output-path>\n";
+  s << "\n";
+  s << "Required arguments:\n";
+  s << "  <input-path>\n";
+  s << "     Path to input file (serialized SGNS model).\n";
+  s << "  <word-pair-list-path>\n";
+  s << "     Path to word pair list (one pair per line: two words separated by a tab).\n";
+  s << "  <output-path>\n";
+  s << "     Path to output file (one triple per line: two words and a similarity score separated by tabs).\n";
+  s << "\n";
+  s << "Optional arguments:\n";
+  s << "  -h\n";
+  s << "     Print this help and exit.\n";
+}
+
 int main(int argc, char **argv) {
-  if (argc != 4) {
-    cerr << "usage: " << argv[0] << " <input-path> <word-pair-list-path> <output-path>\n";
+  const string program(argv[0]);
+
+  int ret = 0;
+  while (ret != -1) {
+    ret = getopt(argc, argv, "h");
+    switch (ret) {
+      case 'h':
+        usage(cout, program);
+        exit(0);
+      case '?':
+        usage(cerr, program);
+        exit(1);
+      case -1:
+        break;
+    }
+  }
+  if (optind + 3 != argc) {
+    usage(cerr, program);
     exit(1);
   }
-  const char *input_path = argv[1];
-  const char *word_pair_list_path = argv[2];
-  const char *output_path = argv[3];
+  const char *input_path = argv[optind];
+  const char *word_pair_list_path = argv[optind + 1];
+  const char *output_path = argv[optind + 2];
 
   info(__func__, "loading model ...\n");
   auto model(FileSerializer<SGNSModel>(input_path).load());
