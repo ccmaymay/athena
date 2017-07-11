@@ -65,11 +65,14 @@ void usage(ostream& s, const string& program) {
   s << "  -k <kappa>\n";
   s << "     Set learning rate overall multiplier.\n";
   s << "     Default: " << DEFAULT_KAPPA << "\n";
+  s << "  -l <lm-path>\n";
+  s << "     Load language model from file (rather than learning from data).\n";
   s << "  -h\n";
   s << "     Print this help and exit.\n";
 }
 
 int main(int argc, char **argv) {
+  string lm_path;
   size_t
     vocab_dim(DEFAULT_VOCAB_DIM),
     embedding_dim(DEFAULT_EMBEDDING_DIM),
@@ -84,7 +87,7 @@ int main(int argc, char **argv) {
 
   int ret = 0;
   while (ret != -1) {
-    ret = getopt(argc, argv, "v:e:s:n:c:t:k:h");
+    ret = getopt(argc, argv, "v:e:s:n:c:t:k:l:h");
     switch (ret) {
       case 'v':
         vocab_dim = stoull(string(optarg));
@@ -107,6 +110,9 @@ int main(int argc, char **argv) {
       case 'k':
         kappa = stof(string(optarg));
         break;
+      case 'l':
+        lm_path = string(optarg);
+        break;
       case 'h':
         usage(cout, program);
         exit(0);
@@ -127,8 +133,46 @@ int main(int argc, char **argv) {
   info(__func__, "seeding random number generator ...\n");
   seed_default();
 
-  info(__func__, "initializing model ...\n");
-  auto language_model(make_shared<NaiveLanguageModel>(subsample_threshold));
+  shared_ptr<LanguageModel> language_model;
+
+  if (lm_path.empty()) {
+    info(__func__, "initializing language model ...\n");
+    language_model = make_shared<NaiveLanguageModel>(subsample_threshold);
+
+    info(__func__, "loading words into vocabulary ...\n");
+    string word;
+    ifstream f;
+    f.open(input_path);
+    stream_ready_or_throw(f);
+    while (f) {
+      const char c = f.get();
+      if (c == '\r') {
+        continue;
+      }
+      if (c == ' ' || c == '\n' || c == '\t') {
+        if (! word.empty()) {
+          language_model->increment(word);
+          word.clear();
+        }
+      } else {
+        word.push_back(c);
+      }
+    }
+    f.close();
+
+    info(__func__, "truncating language model ...\n");
+    language_model->truncate(vocab_dim);
+  } else {
+    info(__func__, "loading language model ...\n");
+    language_model = FileSerializer<LanguageModel>(lm_path).load();
+
+    info(__func__, "setting vocab dim to language model size " <<
+                     language_model->size() <<
+                     " ...\n");
+    vocab_dim = language_model->size();
+  }
+
+  info(__func__, "initializing SGNS model ...\n");
   auto model(make_shared<SGNSModel>(
     make_shared<WordContextFactorization>(vocab_dim, embedding_dim),
     make_shared<ReservoirSamplingStrategy>(
@@ -144,29 +188,6 @@ int main(int argc, char **argv) {
   model->sentence_learner->set_model(model);
   model->subsampling_sentence_learner->set_model(model);
 
-  info(__func__, "loading words into vocabulary ...\n");
-  string word;
-  ifstream f;
-  f.open(input_path);
-  stream_ready_or_throw(f);
-  while (f) {
-    const char c = f.get();
-    if (c == '\r') {
-      continue;
-    }
-    if (c == ' ' || c == '\n' || c == '\t') {
-      if (! word.empty()) {
-        language_model->increment(word);
-        word.clear();
-      }
-    } else {
-      word.push_back(c);
-    }
-  }
-
-  info(__func__, "truncating language model ...\n");
-  language_model->truncate(vocab_dim);
-
   info(__func__, "initializing reservoir ...\n");
   CountNormalizer normalizer(SMOOTHING_EXPONENT, SMOOTHING_OFFSET);
   model->neg_sampling_strategy->reset(*language_model, normalizer);
@@ -174,8 +195,10 @@ int main(int argc, char **argv) {
   info(__func__, "training ...\n");
   vector<string> sentence;
   size_t words_seen = 0;
-  f.clear();
-  f.seekg(0);
+  string word;
+  ifstream f;
+  f.open(input_path);
+  stream_ready_or_throw(f);
   time_t start = time(NULL);
   while (f) {
     sentence.clear();
