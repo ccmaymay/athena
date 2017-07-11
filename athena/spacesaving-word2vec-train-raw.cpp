@@ -62,11 +62,15 @@ void usage(ostream& s, const string& program) {
   s << "  -k <kappa>\n";
   s << "     Set learning rate overall multiplier.\n";
   s << "     Default: " << DEFAULT_KAPPA << "\n";
+  s << "  -x <eos-symbol>\n";
+  s << "     Set explicit end-of-sentence symbol.\n";
+  s << "     Default: none (sentences delimited by newlines only)\n";
   s << "  -h\n";
   s << "     Print this help and exit.\n";
 }
 
 int main(int argc, char **argv) {
+  string eos_symbol;
   size_t
     vocab_dim(DEFAULT_VOCAB_DIM),
     embedding_dim(DEFAULT_EMBEDDING_DIM),
@@ -81,7 +85,7 @@ int main(int argc, char **argv) {
 
   int ret = 0;
   while (ret != -1) {
-    ret = getopt(argc, argv, "v:e:s:n:c:t:k:h");
+    ret = getopt(argc, argv, "v:e:s:n:c:t:k:x:h");
     switch (ret) {
       case 'v':
         vocab_dim = stoull(string(optarg));
@@ -103,6 +107,9 @@ int main(int argc, char **argv) {
         break;
       case 'k':
         kappa = stof(string(optarg));
+        break;
+      case 'x':
+        eos_symbol = string(optarg);
         break;
       case 'h':
         usage(cout, program);
@@ -140,7 +147,7 @@ int main(int argc, char **argv) {
   model->sentence_learner->set_model(model);
   model->subsampling_sentence_learner->set_model(model);
 
-  info(__func__, "loading initial data ...\n");
+  info(__func__, "training ...\n");
   vector<string> sentence;
   string word;
   ifstream f;
@@ -156,7 +163,7 @@ int main(int argc, char **argv) {
         continue;
       }
       if (c == ' ' || c == '\n' || c == '\t') {
-        if (! word.empty()) {
+        if (! word.empty() && word != eos_symbol) {
           sentence.push_back(word);
           ++words_seen;
           word.clear();

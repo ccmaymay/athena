@@ -65,6 +65,9 @@ void usage(ostream& s, const string& program) {
   s << "  -k <kappa>\n";
   s << "     Set learning rate overall multiplier.\n";
   s << "     Default: " << DEFAULT_KAPPA << "\n";
+  s << "  -x <eos-symbol>\n";
+  s << "     Set explicit end-of-sentence symbol.\n";
+  s << "     Default: none (sentences delimited by newlines only)\n";
   s << "  -l <lm-path>\n";
   s << "     Load language model from file (rather than learning from data).\n";
   s << "  -h\n";
@@ -72,7 +75,7 @@ void usage(ostream& s, const string& program) {
 }
 
 int main(int argc, char **argv) {
-  string lm_path;
+  string lm_path, eos_symbol;
   size_t
     vocab_dim(DEFAULT_VOCAB_DIM),
     embedding_dim(DEFAULT_EMBEDDING_DIM),
@@ -87,7 +90,7 @@ int main(int argc, char **argv) {
 
   int ret = 0;
   while (ret != -1) {
-    ret = getopt(argc, argv, "v:e:s:n:c:t:k:l:h");
+    ret = getopt(argc, argv, "v:e:s:n:c:t:k:l:x:h");
     switch (ret) {
       case 'v':
         vocab_dim = stoull(string(optarg));
@@ -112,6 +115,9 @@ int main(int argc, char **argv) {
         break;
       case 'l':
         lm_path = string(optarg);
+        break;
+      case 'x':
+        eos_symbol = string(optarg);
         break;
       case 'h':
         usage(cout, program);
@@ -150,7 +156,7 @@ int main(int argc, char **argv) {
         continue;
       }
       if (c == ' ' || c == '\n' || c == '\t') {
-        if (! word.empty()) {
+        if (! word.empty() && word != eos_symbol) {
           language_model->increment(word);
           word.clear();
         }
@@ -208,7 +214,7 @@ int main(int argc, char **argv) {
         continue;
       }
       if (c == ' ' || c == '\n' || c == '\t') {
-        if (! word.empty()) {
+        if (! word.empty() && word != eos_symbol) {
           sentence.push_back(word);
           ++words_seen;
           word.clear();
