@@ -85,7 +85,8 @@ MAIN_SOURCES := \
     $(SRC_DIR)/spacesaving-lm-train-raw.cpp \
     $(SRC_DIR)/naive-lm-train-raw.cpp \
     $(SRC_DIR)/lm-print.cpp \
-    $(SRC_DIR)/sgns-model-print-similarity.cpp
+    $(SRC_DIR)/sgns-model-print-similarity.cpp \
+    $(SRC_DIR)/word2vec-vocab-to-naive-lm.cpp
 MAIN_OBJECTS := $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(MAIN_SOURCES))
 MAIN_NAMES := $(MAIN_OBJECTS:.o=)
 
