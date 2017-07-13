@@ -37,66 +37,42 @@ class FloatVectorNearTest: public ::testing::Test {
 };
 
 
-class AliasSamplerTest: public ::testing::Test {
+class SamplerTest: public ::testing::Test {
   protected:
     vector<float> probabilities;
-    AliasSampler *alias_sampler;
 
     virtual void SetUp() {
       probabilities = {0.1, 0.5, 0.4};
-      alias_sampler = new AliasSampler(probabilities);
-    }
-
-    virtual void TearDown() {
-      delete alias_sampler;
     }
 };
 
 
-class OneAtomAliasSamplerTest: public ::testing::Test {
+class OneAtomSamplerTest: public ::testing::Test {
   protected:
     vector<float> probabilities;
-    AliasSampler *alias_sampler;
 
     virtual void SetUp() {
       probabilities = {0, 0, 1, 0};
-      alias_sampler = new AliasSampler(probabilities);
-    }
-
-    virtual void TearDown() {
-      delete alias_sampler;
     }
 };
 
 
-class TwoAtomAliasSamplerTest: public ::testing::Test {
+class TwoAtomSamplerTest: public ::testing::Test {
   protected:
     vector<float> probabilities;
-    AliasSampler *alias_sampler;
 
     virtual void SetUp() {
       probabilities = {0.6, 0, 0.4, 0};
-      alias_sampler = new AliasSampler(probabilities);
-    }
-
-    virtual void TearDown() {
-      delete alias_sampler;
     }
 };
 
 
-class UniformAliasSamplerTest: public ::testing::Test {
+class UniformSamplerTest: public ::testing::Test {
   protected:
     vector<float> probabilities;
-    AliasSampler *alias_sampler;
 
     virtual void SetUp() {
       probabilities = {0.25, 0.25, 0.25, 0.25};
-      alias_sampler = new AliasSampler(probabilities);
-    }
-
-    virtual void TearDown() {
-      delete alias_sampler;
     }
 };
 

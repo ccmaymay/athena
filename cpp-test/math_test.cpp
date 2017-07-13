@@ -286,7 +286,9 @@ TEST_F(FloatVectorNearTest, far_0_2) {
   EXPECT_FALSE(near(x, y));
 }
 
-TEST_F(AliasSamplerTest, sample) {
+TEST_F(SamplerTest, naive) {
+  NaiveSampler naive_sampler(probabilities);
+
   const size_t num_samples = 100000;
   const float p_0 = 0.1,
                p_1 = 0.5,
@@ -294,7 +296,150 @@ TEST_F(AliasSamplerTest, sample) {
   float sum[] = {0, 0, 0};
   float sumsq[] = {0, 0, 0};
   for (size_t t = 0; t < num_samples; ++t) {
-    const size_t word_idx = alias_sampler->sample();
+    const size_t word_idx = naive_sampler.sample();
+    sum[word_idx] += 1;
+    for (size_t w = 0; w < 3; ++w) {
+      sumsq[w] += pow((w == word_idx ? 1. : 0.) -
+                      (w == 2 ? p_2 : (w == 1 ? p_1 : p_0)), 2);
+    }
+  }
+  const float sigma_0 = p_0 * (1 - p_0);
+  const float sigma_1 = p_1 * (1 - p_1);
+  const float sigma_2 = p_2 * (1 - p_2);
+  const float mean_sigma_0 = sqrt(
+    sigma_0 / num_samples
+  );
+  const float mean_sigma_1 = sqrt(
+    sigma_1 / num_samples
+  );
+  const float mean_sigma_2 = sqrt(
+    sigma_2 / num_samples
+  );
+  EXPECT_NEAR(p_0, sum[0] / num_samples, 6. * mean_sigma_0);
+  EXPECT_NEAR(p_1, sum[1] / num_samples, 6. * mean_sigma_1);
+  EXPECT_NEAR(p_2, sum[2] / num_samples, 6. * mean_sigma_2);
+  const float variance_sigma_0 = sqrt(
+    2. * (num_samples - 1.) * sigma_0 / pow(num_samples, 2)
+  );
+  const float variance_sigma_1 = sqrt(
+    2. * (num_samples - 1.) * sigma_1 / pow(num_samples, 2)
+  );
+  const float variance_sigma_2 = sqrt(
+    2. * (num_samples - 1.) * sigma_2 / pow(num_samples, 2)
+  );
+  EXPECT_NEAR(sigma_0, sumsq[0] / num_samples, 6. * variance_sigma_0);
+  EXPECT_NEAR(sigma_1, sumsq[1] / num_samples, 6. * variance_sigma_1);
+  EXPECT_NEAR(sigma_2, sumsq[2] / num_samples, 6. * variance_sigma_2);
+}
+
+TEST_F(OneAtomSamplerTest, naive) {
+  NaiveSampler naive_sampler(probabilities);
+
+  const size_t num_samples = 100000;
+  const float p_2 = 1;
+  float sum[] = {0, 0, 0, 0};
+  float sumsq[] = {0, 0, 0, 0};
+  for (size_t t = 0; t < num_samples; ++t) {
+    const size_t word_idx = naive_sampler.sample();
+    sum[word_idx] += 1;
+    for (size_t w = 0; w < 4; ++w) {
+      sumsq[w] += pow((w == word_idx ? 1. : 0.) -
+                      (w == 2 ? p_2 : 0), 2);
+    }
+  }
+  const float sigma_2 = p_2 * (1 - p_2);
+  const float mean_sigma_2 = sqrt(
+    sigma_2 / num_samples
+  );
+  EXPECT_EQ(0, sum[0]);
+  EXPECT_EQ(0, sum[1]);
+  EXPECT_NEAR(p_2, sum[2] / num_samples, 6. * mean_sigma_2);
+  EXPECT_EQ(0, sum[3]);
+  const float variance_sigma_2 = sqrt(
+    2. * (num_samples - 1.) * sigma_2 / pow(num_samples, 2)
+  );
+  EXPECT_NEAR(sigma_2, sumsq[2] / num_samples, 6. * variance_sigma_2);
+}
+
+TEST_F(TwoAtomSamplerTest, naive) {
+  NaiveSampler naive_sampler(probabilities);
+
+  const size_t num_samples = 100000;
+  const float p_0 = 0.6,
+               p_2 = 0.4;
+  float sum[] = {0, 0, 0, 0};
+  float sumsq[] = {0, 0, 0, 0};
+  for (size_t t = 0; t < num_samples; ++t) {
+    const size_t word_idx = naive_sampler.sample();
+    sum[word_idx] += 1;
+    for (size_t w = 0; w < 4; ++w) {
+      sumsq[w] += pow((w == word_idx ? 1. : 0.) -
+                      (w == 2 ? p_2 : (w == 0 ? p_0 : 0)), 2);
+    }
+  }
+  const float sigma_0 = p_0 * (1 - p_0);
+  const float sigma_2 = p_2 * (1 - p_2);
+  const float mean_sigma_0 = sqrt(
+    sigma_0 / num_samples
+  );
+  const float mean_sigma_2 = sqrt(
+    sigma_2 / num_samples
+  );
+  EXPECT_NEAR(p_0, sum[0] / num_samples, 6. * mean_sigma_0);
+  EXPECT_EQ(0, sum[1]);
+  EXPECT_NEAR(p_2, sum[2] / num_samples, 6. * mean_sigma_2);
+  EXPECT_EQ(0, sum[3]);
+  const float variance_sigma_0 = sqrt(
+    2. * (num_samples - 1.) * sigma_0 / pow(num_samples, 2)
+  );
+  const float variance_sigma_2 = sqrt(
+    2. * (num_samples - 1.) * sigma_2 / pow(num_samples, 2)
+  );
+  EXPECT_NEAR(sigma_0, sumsq[0] / num_samples, 6. * variance_sigma_0);
+  EXPECT_NEAR(sigma_2, sumsq[2] / num_samples, 6. * variance_sigma_2);
+}
+
+TEST_F(UniformSamplerTest, naive) {
+  NaiveSampler naive_sampler(probabilities);
+
+  const size_t num_samples = 100000;
+  float sum[] = {0, 0, 0, 0};
+  float sumsq[] = {0, 0, 0, 0};
+  for (size_t t = 0; t < num_samples; ++t) {
+    const size_t word_idx = naive_sampler.sample();
+    sum[word_idx] += 1;
+    for (size_t w = 0; w < 4; ++w) {
+      sumsq[w] += pow((w == word_idx ? 1. : 0.) - 0.25, 2);
+    }
+  }
+  const float sigma = 0.25 * (1 - 0.25);
+  const float mean_sigma = sqrt(
+    sigma / num_samples
+  );
+  EXPECT_NEAR(0.25, sum[0] / num_samples, 6. * mean_sigma);
+  EXPECT_NEAR(0.25, sum[1] / num_samples, 6. * mean_sigma);
+  EXPECT_NEAR(0.25, sum[2] / num_samples, 6. * mean_sigma);
+  EXPECT_NEAR(0.25, sum[3] / num_samples, 6. * mean_sigma);
+  const float variance_sigma = sqrt(
+    2. * (num_samples - 1.) * sigma / pow(num_samples, 2)
+  );
+  EXPECT_NEAR(sigma, sumsq[0] / num_samples, 6. * variance_sigma);
+  EXPECT_NEAR(sigma, sumsq[1] / num_samples, 6. * variance_sigma);
+  EXPECT_NEAR(sigma, sumsq[2] / num_samples, 6. * variance_sigma);
+  EXPECT_NEAR(sigma, sumsq[3] / num_samples, 6. * variance_sigma);
+}
+
+TEST_F(SamplerTest, alias) {
+  AliasSampler alias_sampler(probabilities);
+
+  const size_t num_samples = 100000;
+  const float p_0 = 0.1,
+               p_1 = 0.5,
+               p_2 = 0.4;
+  float sum[] = {0, 0, 0};
+  float sumsq[] = {0, 0, 0};
+  for (size_t t = 0; t < num_samples; ++t) {
+    const size_t word_idx = alias_sampler.sample();
     sum[word_idx] += 1;
     for (size_t w = 0; w < 3; ++w) {
       sumsq[w] += pow((w == word_idx ? 1. : 0.) -
@@ -336,13 +481,15 @@ TEST(null_alias_sampler_test, constructor) {
   EXPECT_TRUE(true);
 }
 
-TEST_F(OneAtomAliasSamplerTest, sample) {
+TEST_F(OneAtomSamplerTest, alias) {
+  AliasSampler alias_sampler(probabilities);
+
   const size_t num_samples = 100000;
   const float p_2 = 1;
   float sum[] = {0, 0, 0, 0};
   float sumsq[] = {0, 0, 0, 0};
   for (size_t t = 0; t < num_samples; ++t) {
-    const size_t word_idx = alias_sampler->sample();
+    const size_t word_idx = alias_sampler.sample();
     sum[word_idx] += 1;
     for (size_t w = 0; w < 4; ++w) {
       sumsq[w] += pow((w == word_idx ? 1. : 0.) -
@@ -363,14 +510,16 @@ TEST_F(OneAtomAliasSamplerTest, sample) {
   EXPECT_NEAR(sigma_2, sumsq[2] / num_samples, 6. * variance_sigma_2);
 }
 
-TEST_F(TwoAtomAliasSamplerTest, sample) {
+TEST_F(TwoAtomSamplerTest, alias) {
+  AliasSampler alias_sampler(probabilities);
+
   const size_t num_samples = 100000;
   const float p_0 = 0.6,
                p_2 = 0.4;
   float sum[] = {0, 0, 0, 0};
   float sumsq[] = {0, 0, 0, 0};
   for (size_t t = 0; t < num_samples; ++t) {
-    const size_t word_idx = alias_sampler->sample();
+    const size_t word_idx = alias_sampler.sample();
     sum[word_idx] += 1;
     for (size_t w = 0; w < 4; ++w) {
       sumsq[w] += pow((w == word_idx ? 1. : 0.) -
@@ -399,12 +548,14 @@ TEST_F(TwoAtomAliasSamplerTest, sample) {
   EXPECT_NEAR(sigma_2, sumsq[2] / num_samples, 6. * variance_sigma_2);
 }
 
-TEST_F(UniformAliasSamplerTest, sample) {
+TEST_F(UniformSamplerTest, alias) {
+  AliasSampler alias_sampler(probabilities);
+
   const size_t num_samples = 100000;
   float sum[] = {0, 0, 0, 0};
   float sumsq[] = {0, 0, 0, 0};
   for (size_t t = 0; t < num_samples; ++t) {
-    const size_t word_idx = alias_sampler->sample();
+    const size_t word_idx = alias_sampler.sample();
     sum[word_idx] += 1;
     for (size_t w = 0; w < 4; ++w) {
       sumsq[w] += pow((w == word_idx ? 1. : 0.) - 0.25, 2);

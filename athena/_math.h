@@ -134,6 +134,30 @@ class CountNormalizer {
 };
 
 
+class NaiveSampler {
+  size_t _size;
+  std::vector<float> _probability_table;
+
+  public:
+    NaiveSampler(const std::vector<float>& probabilities);
+    virtual size_t sample() const;
+    virtual ~NaiveSampler() { }
+
+    virtual bool equals(const NaiveSampler& other) const;
+    virtual void serialize(std::ostream& stream) const;
+    static std::shared_ptr<NaiveSampler> deserialize(std::istream& stream);
+
+    NaiveSampler(size_t size,
+                 std::vector<float>&& probability_table):
+      _size(size),
+      _probability_table(
+        std::forward<std::vector<float> >(probability_table)) { }
+
+  private:
+    NaiveSampler(const NaiveSampler& alias_sampler);
+};
+
+
 class AliasSampler {
   size_t _size;
   std::vector<size_t> _alias_table;

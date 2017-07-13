@@ -205,6 +205,58 @@ bool CountNormalizer::equals(const CountNormalizer& other) const {
 
 
 //
+// NaiveSampler
+//
+
+
+NaiveSampler::NaiveSampler(const vector<float>& probabilities):
+    _size(probabilities.size()),
+    _probability_table(probabilities.size(), 0.) {
+  if (_size > 0) {
+    _probability_table[0] = probabilities[0];
+  }
+  for (size_t i = 1; i < _size; ++i) {
+    _probability_table[i] = _probability_table[i - 1] + probabilities[i];
+  }
+}
+
+size_t NaiveSampler::sample() const {
+  uniform_real_distribution<float> d(0, 1);
+  const float target_p = d(get_urng());
+  size_t low = 0, high = _size - 1;
+  while (high > low) {
+    const size_t mid = (low + high) / 2;
+    if (target_p > _probability_table[mid]) {
+      low = mid + 1;
+    } else {
+      high = mid;
+    }
+  }
+  return high;
+}
+
+void NaiveSampler::serialize(ostream& stream) const {
+  Serializer<size_t>::serialize(_size, stream);
+  Serializer<vector<float> >::serialize(_probability_table, stream);
+}
+
+shared_ptr<NaiveSampler> NaiveSampler::deserialize(istream& stream) {
+  auto size(*Serializer<size_t>::deserialize(stream));
+  auto probability_table(Serializer<vector<float> >::deserialize(stream));
+  return make_shared<NaiveSampler>(
+    size,
+    move(*probability_table)
+  );
+}
+
+bool NaiveSampler::equals(const NaiveSampler& other) const {
+  return
+    _size == other._size &&
+    near(_probability_table, other._probability_table);
+}
+
+
+//
 // AliasSampler
 //
 
