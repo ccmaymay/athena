@@ -46,9 +46,7 @@ endif
 ifeq ($(shell uname -s),Darwin)
 	CXX := clang++
 	CXX_LD := clang++
-	ifeq ($(HAVE_CBLAS),1)
-		LIBS += -framework Accelerate
-	endif
+	CBLAS_FLAGS ?= -framework Accelerate
 	LDFLAGS += -undefined dynamic_lookup -arch x86_64
 	ifdef GCOV
 		LIBS += --coverage
@@ -56,9 +54,7 @@ ifeq ($(shell uname -s),Darwin)
 else
 	CXX := g++
 	CXX_LD := g++
-	ifeq ($(HAVE_CBLAS),1)
-		LIBS += -lcblas
-	endif
+	CBLAS_FLAGS ?= -lcblas
 	ifdef DEBUG
 		CXXFLAGS += -fvar-tracking-assignments
 	endif
@@ -66,6 +62,10 @@ else
 	ifdef GCOV
 		LIBS += -lgcov
 	endif
+endif
+
+ifeq ($(HAVE_CBLAS),1)
+	LIBS += $(CBLAS_FLAGS)
 endif
 
 INSTALL_BASE_DIR := $(PREFIX)
