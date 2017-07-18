@@ -123,6 +123,8 @@ class NaiveLanguageModel : public LanguageModel {
     // normalized frequency corresponding to word_idx)
     virtual bool subsample(long word_idx) const;
     virtual void truncate(size_t max_size);
+    // sort language model words by count (descending)
+    virtual void sort();
     virtual ~NaiveLanguageModel() { }
 
     virtual bool equals(const LanguageModel& other) const;

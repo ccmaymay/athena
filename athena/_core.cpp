@@ -92,7 +92,7 @@ vector<size_t> NaiveLanguageModel::counts() const {
 
 vector<size_t> NaiveLanguageModel::ordered_counts() const {
   vector<size_t> c(_counters);
-  sort(c.begin(), c.end());
+  ::sort(c.begin(), c.end());
   reverse(c.begin(), c.end());
   return c;
 }
@@ -117,8 +117,8 @@ void NaiveLanguageModel::truncate(size_t max_size) {
   for (size_t i = 0; i < _size; ++i) {
     _sorted_words[i] = make_pair(_words[i], _counters[i]);
   }
-  sort(_sorted_words.rbegin(), _sorted_words.rend(),
-       pair_second_cmp<string,size_t>);
+  ::sort(_sorted_words.rbegin(), _sorted_words.rend(),
+         pair_second_cmp<string,size_t>);
 
   _size = min(_size, max_size);
 
@@ -139,6 +139,10 @@ void NaiveLanguageModel::truncate(size_t max_size) {
     _counters.push_back(it->second);
     _total += it->second;
   }
+}
+
+void NaiveLanguageModel::sort() {
+  truncate(_size);
 }
 
 void NaiveLanguageModel::serialize(ostream& stream) const {
