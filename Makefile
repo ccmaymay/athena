@@ -2,6 +2,7 @@
 # For all other purposes use the Python setuptools build:
 #   python setup.py ...
 
+AR := ar
 CXXFLAGS += -std=gnu++11 -Wall -Werror -pedantic -I$(SRC_DIR) -fopenmp -DLOG_INFO
 TEST_CXXFLAGS += $(CXXFLAGS)
 LDFLAGS += -L$(BUILD_DIR) -fopenmp
@@ -92,6 +93,7 @@ MAIN_NAMES := $(MAIN_OBJECTS:.o=)
 
 GEN_SOURCES := $(SRC_DIR)/core.cpp
 
+LIB_NAME := $(BUILD_DIR)/libathena.a
 LIB_SOURCES := $(filter-out $(MAIN_SOURCES),$(filter-out $(GEN_SOURCES),$(wildcard $(SRC_DIR)/*.cpp)))
 LIB_OBJECTS := $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(LIB_SOURCES))
 
@@ -122,7 +124,11 @@ valgrind-test: $(TEST_PROGRAM)
 main: $(MAIN_NAMES)
 
 .PHONY: lib
-lib: $(LIB_OBJECTS)
+lib: $(LIB_NAME)
+
+$(LIB_NAME): $(LIB_OBJECTS)
+	@mkdir -p $(@D)
+	$(AR) rs $@ $^
 
 $(MAIN_OBJECTS): $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(@D)
