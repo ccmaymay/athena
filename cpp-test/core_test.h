@@ -139,23 +139,12 @@ class WordContextFactorizationSerializationTest: public ::testing::Test {
     virtual void TearDown() { }
 };
 
-class OneDimSGDTest: public ::testing::Test {
+class SGDTest: public ::testing::Test {
   protected:
     std::shared_ptr<SGD> sgd;
 
     virtual void SetUp() {
-      sgd = std::make_shared<SGD>(1, 100, 0.5, 0.1);
-    }
-
-    virtual void TearDown() { }
-};
-
-class ThreeDimSGDTest: public ::testing::Test {
-  protected:
-    std::shared_ptr<SGD> sgd;
-
-    virtual void SetUp() {
-      sgd = std::make_shared<SGD>(3, 100, 0.5, 0.1);
+      sgd = std::make_shared<SGD>(100, 0.5, 0.1);
     }
 
     virtual void TearDown() { }
@@ -166,10 +155,10 @@ class SGDSerializationTest: public ::testing::Test {
     std::shared_ptr<SGD> sgd;
 
     virtual void SetUp() {
-      sgd = std::make_shared<SGD>(3, 100, 0.5, 0.1);
-      sgd->step(0);
-      sgd->step(2);
-      sgd->step(2);
+      sgd = std::make_shared<SGD>(100, 0.5, 0.1);
+      sgd->step();
+      sgd->step();
+      sgd->step();
     }
 
     virtual void TearDown() { }

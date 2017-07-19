@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
     make_shared<ReservoirSamplingStrategy>(
       make_shared<ReservoirSampler<long> >(RESERVOIR_SIZE)),
     language_model,
-    make_shared<SGD>(vocab_dim, tau, kappa, RHO_LOWER_BOUND_FACTOR * kappa),
+    make_shared<SGD>(tau, kappa, RHO_LOWER_BOUND_FACTOR * kappa),
     make_shared<DynamicContextStrategy>(symm_context),
     make_shared<SGNSTokenLearner>(),
     make_shared<SGNSSentenceLearner>(neg_samples, PROPAGATE_RETAINED),

@@ -26,7 +26,7 @@ class SGNSMockSGDTokenLearnerTest: public ::testing::Test {
     std::shared_ptr<SGNSModel> model;
 
     virtual void SetUp() {
-      sgd = std::make_shared<MockSGD>(3, 2, 0.5, 0.1);
+      sgd = std::make_shared<MockSGD>(2, 0.5, 0.1);
       lm = std::make_shared<MockLanguageModel>();
       EXPECT_CALL(*lm, size()).WillRepeatedly(Return(3));
       factorization = std::make_shared<WordContextFactorization>(3, 2);
@@ -77,7 +77,7 @@ class SGNSTokenLearnerTest: public ::testing::Test {
     std::shared_ptr<SGNSModel> model;
 
     virtual void SetUp() {
-      sgd = std::make_shared<SGD>(3, 2, 0.5, 0.1);
+      sgd = std::make_shared<SGD>(2, 0.5, 0.1);
       lm = std::make_shared<MockLanguageModel>();
       EXPECT_CALL(*lm, size()).WillRepeatedly(Return(3));
       factorization = std::make_shared<WordContextFactorization>(3, 2);
@@ -129,7 +129,7 @@ class SGNSSentenceLearnerTest: public ::testing::Test {
     std::shared_ptr<SGNSModel> model;
 
     virtual void SetUp() {
-      sgd = std::make_shared<MockSGD>(3, 2, 0.5, 0.1);
+      sgd = std::make_shared<MockSGD>(2, 0.5, 0.1);
       lm = std::make_shared<MockLanguageModel>();
       EXPECT_CALL(*lm, size()).WillRepeatedly(Return(3));
       factorization = std::make_shared<WordContextFactorization>(3, 2);
@@ -184,7 +184,7 @@ class NonPropagatingSubsamplingSGNSSentenceLearnerTest: public ::testing::Test {
     std::shared_ptr<SGNSModel> model;
 
     virtual void SetUp() {
-      sgd = std::make_shared<MockSGD>(3, 2, 0.5, 0.1);
+      sgd = std::make_shared<MockSGD>(2, 0.5, 0.1);
       lm = std::make_shared<MockLanguageModel>();
       EXPECT_CALL(*lm, size()).WillRepeatedly(Return(3));
       factorization = std::make_shared<WordContextFactorization>(3, 2);
@@ -222,7 +222,7 @@ class SubsamplingSGNSSentenceLearnerTest: public ::testing::Test {
     std::shared_ptr<SGNSModel> model;
 
     virtual void SetUp() {
-      sgd = std::make_shared<MockSGD>(3, 2, 0.5, 0.1);
+      sgd = std::make_shared<MockSGD>(2, 0.5, 0.1);
       lm = std::make_shared<MockLanguageModel>();
       EXPECT_CALL(*lm, size()).WillRepeatedly(Return(3));
       factorization = std::make_shared<WordContextFactorization>(3, 2);
@@ -261,7 +261,7 @@ class SGNSModelTest: public ::testing::Test {
     std::shared_ptr<SGNSModel> model;
 
     virtual void SetUp() {
-      sgd = std::make_shared<SGD>(3, 2, 0.5, 0.1);
+      sgd = std::make_shared<SGD>(2, 0.5, 0.1);
       lm = std::make_shared<SpaceSavingLanguageModel>();
       factorization = std::make_shared<WordContextFactorization>(3, 2);
       reservoir_sampler = std::make_shared<ReservoirSampler<long> >(7);

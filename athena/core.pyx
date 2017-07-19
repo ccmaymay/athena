@@ -380,7 +380,7 @@ cdef class SGNSModel(object):
             neg_sampling_strategy_obj,
             language_model_obj,
             make_shared[_SGD](
-                vocab_dim, tau, kappa, rho_lower_bound
+                tau, kappa, rho_lower_bound
             ),
             context_strategy_obj,
             make_shared[_SGNSTokenLearner](),

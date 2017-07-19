@@ -73,8 +73,7 @@ cdef extern from "_core.h":
         float* get_context_embedding(size_t word_idx)
 
     cdef cppclass SGD:
-        SGD(size_t dimension, float tau, float kappa,
-            float rho_lower_bound)
+        SGD(float tau, float kappa, float rho_lower_bound)
 
     cdef cppclass LanguageModelExampleStore[T]:
         LanguageModelExampleStore(shared_ptr[LanguageModel] language_model,

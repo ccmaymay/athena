@@ -270,42 +270,36 @@ class WordContextFactorization {
 // Stochastic gradient descent parametrization and state.
 
 class SGD {
-  size_t _dimension;
-  float _tau, _kappa, _rho_lower_bound;
-  std::vector<float> _rho;
-  std::vector<size_t> _t;
+  float _tau, _kappa, _rho_lower_bound, _rho;
+  size_t _t;
 
   public:
-    SGD(size_t dimension = 1, float tau = 0, float kappa = 0.6,
-        float rho_lower_bound = 0);
-    virtual void step(size_t dim);
-    virtual float get_rho(size_t dim) const;
-    virtual void gradient_update(size_t dim, size_t n, const float *g,
-                                 float *x);
-    virtual void scaled_gradient_update(size_t dim, size_t n, const float *g,
-                                        float *x, float alpha);
-    virtual void reset(size_t dim);
+    SGD(float tau = 0, float kappa = 0.6, float rho_lower_bound = 0);
+    virtual void step();
+    virtual float get_rho() const;
+    virtual void gradient_update(size_t n, const float *g, float *x);
+    virtual void scaled_gradient_update(size_t n, const float *g, float *x,
+                                        float alpha);
+    virtual void reset();
     virtual ~SGD() { };
 
     virtual bool equals(const SGD& other) const;
     virtual void serialize(std::ostream& stream) const;
     static std::shared_ptr<SGD> deserialize(std::istream& stream);
 
-    SGD(size_t dimension,
-        float tau,
+    SGD(float tau,
         float kappa,
         float rho_lower_bound,
-        std::vector<float>&& rho,
-        std::vector<size_t>&& t):
-          _dimension(dimension),
+        float rho,
+        size_t t):
           _tau(tau),
           _kappa(kappa),
           _rho_lower_bound(rho_lower_bound),
-          _rho(std::forward<std::vector<float> >(rho)),
-          _t(std::forward<std::vector<size_t> >(t)) { }
+          _rho(rho),
+          _t(t) { }
 
   private:
-    void _compute_rho(size_t dimension);
+    void _compute_rho();
     SGD(const SGD& sgd);
 };
 

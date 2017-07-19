@@ -29,20 +29,20 @@ class MockLanguageModel : public LanguageModel {
 class MockSGD : public SGD {
   public:
     using SGD::SGD;
-    MOCK_METHOD1(step, void (size_t dim));
-    MOCK_CONST_METHOD1(get_rho, float (size_t dim));
-    MOCK_METHOD4(gradient_update, void (size_t dim, size_t n, const float *g,
+    MOCK_METHOD0(step, void ());
+    MOCK_CONST_METHOD0(get_rho, float ());
+    MOCK_METHOD3(gradient_update, void (size_t n, const float *g,
                                         float *x));
-    MOCK_METHOD5(scaled_gradient_update, void (size_t dim, size_t n,
+    MOCK_METHOD4(scaled_gradient_update, void (size_t n,
                                                const float *g, float *x,
                                                float alpha));
-    MOCK_METHOD1(reset, void (size_t dim));
+    MOCK_METHOD0(reset, void ());
 
     MOCK_CONST_METHOD1(serialize, void (std::ostream& stream));
     MOCK_CONST_METHOD1(equals, bool (const SGD& other));
 
   private:
-    MOCK_METHOD1(_compute_rho, void (size_t dimension));
+    MOCK_METHOD0(_compute_rho, void ());
 };
 
 

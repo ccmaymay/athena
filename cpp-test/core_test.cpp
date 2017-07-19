@@ -1490,125 +1490,52 @@ TEST_F(WordContextFactorizationSerializationTest, dimension_fixed_point) {
   EXPECT_TRUE(factorization->equals(*from_stream));
 }
 
-TEST_F(OneDimSGDTest, step) {
-  EXPECT_NEAR(0.5, sgd->get_rho(0), EPS);
-  sgd->step(0);
-  EXPECT_NEAR(0.495, sgd->get_rho(0), EPS);
-  sgd->step(0);
-  EXPECT_NEAR(0.49, sgd->get_rho(0), EPS);
+TEST_F(SGDTest, step) {
+  EXPECT_NEAR(0.5, sgd->get_rho(), EPS);
+  sgd->step();
+  EXPECT_NEAR(0.495, sgd->get_rho(), EPS);
+  sgd->step();
+  EXPECT_NEAR(0.49, sgd->get_rho(), EPS);
   for (size_t t = 0; t < 200; ++t) {
-    sgd->step(0);
+    sgd->step();
   }
-  EXPECT_NEAR(0.1, sgd->get_rho(0), EPS);
+  EXPECT_NEAR(0.1, sgd->get_rho(), EPS);
 }
 
-TEST_F(OneDimSGDTest, reset) {
-  EXPECT_NEAR(0.5, sgd->get_rho(0), EPS);
-  sgd->step(0);
-  EXPECT_NEAR(0.495, sgd->get_rho(0), EPS);
+TEST_F(SGDTest, reset) {
+  EXPECT_NEAR(0.5, sgd->get_rho(), EPS);
+  sgd->step();
+  EXPECT_NEAR(0.495, sgd->get_rho(), EPS);
 
-  sgd->reset(0);
+  sgd->reset();
 
-  EXPECT_NEAR(0.5, sgd->get_rho(0), EPS);
-  sgd->step(0);
-  EXPECT_NEAR(0.495, sgd->get_rho(0), EPS);
+  EXPECT_NEAR(0.5, sgd->get_rho(), EPS);
+  sgd->step();
+  EXPECT_NEAR(0.495, sgd->get_rho(), EPS);
 }
 
-TEST_F(OneDimSGDTest, gradient_update) {
+TEST_F(SGDTest, gradient_update) {
   float x[] = {0.5, -1, -2};
   const float g[] = {-5, 0, -3};
 
-  sgd->step(0);
+  sgd->step();
 
-  sgd->gradient_update(0, 3, g, x);
+  sgd->gradient_update(3, g, x);
   EXPECT_NEAR(-1.975, x[0], EPS);
   EXPECT_NEAR(-1,        x[1], EPS);
   EXPECT_NEAR(-3.485, x[2], EPS);
 }
 
-TEST_F(OneDimSGDTest, scaled_gradient_update) {
+TEST_F(SGDTest, scaled_gradient_update) {
   float x[] = {0.5, -1, -2};
   const float g[] = {-5, 0, -3};
 
-  sgd->step(0);
+  sgd->step();
 
-  sgd->scaled_gradient_update(0, 3, g, x, 2);
+  sgd->scaled_gradient_update(3, g, x, 2);
   EXPECT_NEAR(-4.45, x[0], EPS);
   EXPECT_NEAR(-1,        x[1], EPS);
   EXPECT_NEAR(-4.97, x[2], EPS);
-}
-
-TEST_F(ThreeDimSGDTest, step) {
-  EXPECT_NEAR(0.5, sgd->get_rho(0), EPS);
-  EXPECT_NEAR(0.5, sgd->get_rho(1), EPS);
-  EXPECT_NEAR(0.5, sgd->get_rho(2), EPS);
-
-  sgd->step(1);
-
-  EXPECT_LT(sgd->get_rho(1), sgd->get_rho(0));
-  EXPECT_EQ(sgd->get_rho(0), sgd->get_rho(2));
-
-  sgd->step(2);
-
-  EXPECT_LT(sgd->get_rho(1), sgd->get_rho(0));
-  EXPECT_EQ(sgd->get_rho(1), sgd->get_rho(2));
-
-  sgd->step(2);
-
-  EXPECT_LT(sgd->get_rho(2), sgd->get_rho(1));
-  EXPECT_LT(sgd->get_rho(1), sgd->get_rho(0));
-}
-
-TEST_F(ThreeDimSGDTest, reset) {
-  EXPECT_NEAR(0.5, sgd->get_rho(0), EPS);
-  EXPECT_NEAR(0.5, sgd->get_rho(1), EPS);
-  EXPECT_NEAR(0.5, sgd->get_rho(2), EPS);
-
-  sgd->step(1);
-  sgd->step(2);
-  sgd->step(2);
-
-  sgd->reset(2);
-
-  EXPECT_LT(sgd->get_rho(1), sgd->get_rho(0));
-  EXPECT_NEAR(0.5, sgd->get_rho(0), EPS);
-  EXPECT_NEAR(0.5, sgd->get_rho(2), EPS);
-
-  sgd->reset(1);
-
-  EXPECT_NEAR(0.5, sgd->get_rho(0), EPS);
-  EXPECT_NEAR(0.5, sgd->get_rho(1), EPS);
-  EXPECT_NEAR(0.5, sgd->get_rho(2), EPS);
-}
-
-TEST_F(ThreeDimSGDTest, gradient_update) {
-  float x[] = {0.5, -1, -2};
-  const float g[] = {-5, 0, -3};
-
-  sgd->step(0);
-  sgd->step(1);
-  sgd->step(1);
-  sgd->step(2);
-
-  sgd->gradient_update(1, 3, g, x);
-  EXPECT_NEAR(-1.95,     x[0], EPS);
-  EXPECT_NEAR(-1,        x[1], EPS);
-  EXPECT_NEAR(-3.47,     x[2], EPS);
-}
-
-TEST_F(ThreeDimSGDTest, scaled_gradient_update) {
-  float x[] = {0.5, -1, -2};
-  const float g[] = {-5, 0, -3};
-
-  sgd->step(0);
-  sgd->step(1);
-  sgd->step(1);
-  sgd->step(2);
-
-  sgd->scaled_gradient_update(1, 3, g, x, 2);
-  EXPECT_NEAR(-4.4,      x[0], EPS);
-  EXPECT_NEAR(-1,        x[1], EPS);
-  EXPECT_NEAR(-4.94,     x[2], EPS);
 }
 
 TEST_F(SGDSerializationTest, fixed_point) {

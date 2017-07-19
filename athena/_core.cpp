@@ -487,70 +487,62 @@ bool WordContextFactorization::equals(const WordContextFactorization& other) con
 //
 
 
-SGD::SGD(size_t dimension, float tau, float kappa, float rho_lower_bound):
-    _dimension(dimension),
+SGD::SGD(float tau, float kappa, float rho_lower_bound):
     _tau(tau),
     _kappa(kappa),
     _rho_lower_bound(rho_lower_bound),
-    _t(dimension, 0) {
-  _rho.resize(dimension);
-  for (size_t dim = 0; dim < dimension; ++dim) {
-    _compute_rho(dim);
-  }
+    _t(0) {
+  _compute_rho();
 }
 
-void SGD::step(size_t dim) {
-  ++_t[dim];
-  _compute_rho(dim);
+void SGD::step() {
+  ++_t;
+  _compute_rho();
 }
 
-float SGD::get_rho(size_t dim) const {
-  return _rho[dim];
+float SGD::get_rho() const {
+  return _rho;
 }
 
-void SGD::gradient_update(size_t dim, size_t n, const float *g, float *x) {
-  scaled_gradient_update(dim, n, g, x, 1);
+void SGD::gradient_update(size_t n, const float *g, float *x) {
+  scaled_gradient_update(n, g, x, 1);
 }
 
-void SGD::scaled_gradient_update(size_t dim, size_t n, const float *g, float *x,
+void SGD::scaled_gradient_update(size_t n, const float *g, float *x,
                                  float alpha) {
-  cblas_saxpy(n, _rho[dim] * alpha, g, 1, x, 1);
+  cblas_saxpy(n, _rho * alpha, g, 1, x, 1);
 }
 
-void SGD::reset(size_t dim) {
-  _t[dim] = 0;
-  _compute_rho(dim);
+void SGD::reset() {
+  _t = 0;
+  _compute_rho();
 }
 
 void SGD::serialize(ostream& stream) const {
-  Serializer<size_t>::serialize(_dimension, stream);
   Serializer<float>::serialize(_tau, stream);
   Serializer<float>::serialize(_kappa, stream);
   Serializer<float>::serialize(_rho_lower_bound, stream);
-  Serializer<vector<float> >::serialize(_rho, stream);
-  Serializer<vector<size_t> >::serialize(_t, stream);
+  Serializer<float>::serialize(_rho, stream);
+  Serializer<size_t>::serialize(_t, stream);
 }
 
 shared_ptr<SGD> SGD::deserialize(istream& stream) {
-  auto dimension(*Serializer<size_t>::deserialize(stream));
   auto tau(*Serializer<float>::deserialize(stream));
   auto kappa(*Serializer<float>::deserialize(stream));
   auto rho_lower_bound(*Serializer<float>::deserialize(stream));
-  auto rho(Serializer<vector<float> >::deserialize(stream));
-  auto t(Serializer<vector<size_t> >::deserialize(stream));
+  auto rho(*Serializer<float>::deserialize(stream));
+  auto t(*Serializer<size_t>::deserialize(stream));
   return make_shared<SGD>(
-    dimension,
     tau,
     kappa,
     rho_lower_bound,
-    move(*rho),
-    move(*t)
+    rho,
+    t
   );
 }
 
 bool SGD::equals(const SGD& other) const {
   return
-    _dimension == other._dimension &&
     near(_tau, other._tau) &&
     near(_kappa, other._kappa) &&
     near(_rho_lower_bound, other._rho_lower_bound) &&
@@ -558,8 +550,8 @@ bool SGD::equals(const SGD& other) const {
     _t == other._t;
 }
 
-void SGD::_compute_rho(size_t dim) {
-  _rho[dim] = max(_rho_lower_bound, _kappa * (1.f - (float) _t[dim] / _tau));
+void SGD::_compute_rho() {
+  _rho = max(_rho_lower_bound, _kappa * (1.f - (float) _t / _tau));
 }
 
 

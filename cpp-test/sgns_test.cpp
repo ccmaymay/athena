@@ -19,8 +19,6 @@ using ::testing::_;
 
 
 TEST_F(SGNSMockSGDTokenLearnerTest, reset_word) {
-  EXPECT_CALL(*sgd, reset(1));
-
   token_learner->reset_word(1);
 
   EXPECT_EQ(factorization->get_word_embedding(0)[0], 1);
@@ -96,10 +94,7 @@ TEST_F(SGNSTokenLearnerTest, compute_gradient_coeff_negative) {
 
 TEST_F(SGNSTokenLearnerTest, token_train_neg1) {
   const float
-    rho0 = sgd->get_rho(0),
-    rho1 = sgd->get_rho(1),
-    rho2 = sgd->get_rho(2);
-  const float rho = rho0;
+    rho = sgd->get_rho();
   const float adj0 = 1;
 
   InSequence in_sequence;
@@ -130,17 +125,12 @@ TEST_F(SGNSTokenLearnerTest, token_train_neg1) {
   EXPECT_NEAR(.1, factorization->get_context_embedding(2)[0], EPS);
   EXPECT_NEAR(-.2, factorization->get_context_embedding(2)[1], EPS);
 
-  EXPECT_LT(sgd->get_rho(0), rho0);
-  EXPECT_LT(sgd->get_rho(1), rho1);
-  EXPECT_LT(sgd->get_rho(2), rho2);
+  EXPECT_NEAR(sgd->get_rho(), rho, EPS);
 }
 
 TEST_F(SGNSTokenLearnerTest, token_train_neg1_partial_vocab_coverage) {
   const float
-    rho0 = sgd->get_rho(0),
-    rho1 = sgd->get_rho(1),
-    rho2 = sgd->get_rho(2);
-  const float rho = rho0;
+    rho = sgd->get_rho();
   const float adj2 = 1;
 
   InSequence in_sequence;
@@ -171,17 +161,12 @@ TEST_F(SGNSTokenLearnerTest, token_train_neg1_partial_vocab_coverage) {
   EXPECT_NEAR(-.2 + rho * adj2 * (0 - sigmoid(.1 * .4 + (-.2) * 0)) * 0,
               factorization->get_context_embedding(2)[1], FAST_EPS);
 
-  EXPECT_NEAR(sgd->get_rho(0), rho0, EPS);
-  EXPECT_LT(sgd->get_rho(1), rho1);
-  EXPECT_LT(sgd->get_rho(2), rho2);
+  EXPECT_NEAR(sgd->get_rho(), rho, EPS);
 }
 
 TEST_F(SGNSTokenLearnerTest, token_train_neg2) {
   const float
-    rho0 = sgd->get_rho(0),
-    rho1 = sgd->get_rho(1),
-    rho2 = sgd->get_rho(2);
-  const float rho = rho0;
+    rho = sgd->get_rho();
   const float adj2 = 1, adj1 = 1;
 
   InSequence in_sequence;
@@ -235,9 +220,7 @@ TEST_F(SGNSTokenLearnerTest, token_train_neg2) {
               )) * (-.2),
               factorization->get_context_embedding(2)[1], FAST_EPS);
 
-  EXPECT_LT(sgd->get_rho(0), rho0);
-  EXPECT_LT(sgd->get_rho(1), rho1);
-  EXPECT_LT(sgd->get_rho(2), rho2);
+  EXPECT_NEAR(sgd->get_rho(), rho, EPS);
 }
 
 TEST_F(SGNSTokenLearnerTest, compute_similarity) {
