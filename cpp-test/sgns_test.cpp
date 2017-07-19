@@ -130,9 +130,9 @@ TEST_F(SGNSTokenLearnerTest, token_train_neg1) {
   EXPECT_NEAR(.1, factorization->get_context_embedding(2)[0], EPS);
   EXPECT_NEAR(-.2, factorization->get_context_embedding(2)[1], EPS);
 
-  EXPECT_LT(sgd->get_rho(0), rho0);
-  EXPECT_LT(sgd->get_rho(1), rho1);
-  EXPECT_LT(sgd->get_rho(2), rho2);
+  EXPECT_NEAR(sgd->get_rho(0), rho0, EPS);
+  EXPECT_NEAR(sgd->get_rho(1), rho1, EPS);
+  EXPECT_NEAR(sgd->get_rho(2), rho2, EPS);
 }
 
 TEST_F(SGNSTokenLearnerTest, token_train_neg1_partial_vocab_coverage) {
@@ -172,8 +172,8 @@ TEST_F(SGNSTokenLearnerTest, token_train_neg1_partial_vocab_coverage) {
               factorization->get_context_embedding(2)[1], FAST_EPS);
 
   EXPECT_NEAR(sgd->get_rho(0), rho0, EPS);
-  EXPECT_LT(sgd->get_rho(1), rho1);
-  EXPECT_LT(sgd->get_rho(2), rho2);
+  EXPECT_NEAR(sgd->get_rho(1), rho1, EPS);
+  EXPECT_NEAR(sgd->get_rho(2), rho2, EPS);
 }
 
 TEST_F(SGNSTokenLearnerTest, token_train_neg2) {
@@ -235,9 +235,9 @@ TEST_F(SGNSTokenLearnerTest, token_train_neg2) {
               )) * (-.2),
               factorization->get_context_embedding(2)[1], FAST_EPS);
 
-  EXPECT_LT(sgd->get_rho(0), rho0);
-  EXPECT_LT(sgd->get_rho(1), rho1);
-  EXPECT_LT(sgd->get_rho(2), rho2);
+  EXPECT_NEAR(sgd->get_rho(0), rho0, EPS);
+  EXPECT_NEAR(sgd->get_rho(1), rho1, EPS);
+  EXPECT_NEAR(sgd->get_rho(2), rho2, EPS);
 }
 
 TEST_F(SGNSTokenLearnerTest, compute_similarity) {
@@ -376,6 +376,7 @@ TEST_F(SGNSSentenceLearnerTest, sentence_train_zero) {
   EXPECT_CALL(*token_learner, reset_word(_)).Times(0);
   EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), _)).Times(0);
   EXPECT_CALL(*token_learner, token_train(_, _, _)).Times(0);
+  EXPECT_CALL(*sgd, step(_)).Times(0);
 
   sentence_learner->sentence_train(words);
 }
@@ -396,6 +397,7 @@ TEST_F(SGNSSentenceLearnerTest, sentence_train_one) {
     WillOnce(Return(make_pair(size_t(0), size_t(0))));
   EXPECT_CALL(*token_learner, reset_word(_)).Times(0);
   EXPECT_CALL(*token_learner, token_train(_, _, _)).Times(0);
+  EXPECT_CALL(*sgd, step(_)).Times(0);
 
   sentence_learner->sentence_train(words);
 }
@@ -430,6 +432,7 @@ TEST_F(SGNSSentenceLearnerTest, sentence_train_empty_context) {
     WillOnce(Return(make_pair(size_t(0), size_t(0))));
   EXPECT_CALL(*token_learner, reset_word(_)).Times(0);
   EXPECT_CALL(*token_learner, token_train(_, _, _)).Times(0);
+  EXPECT_CALL(*sgd, step(_)).Times(0);
 
   sentence_learner->sentence_train(words);
 }
@@ -460,14 +463,17 @@ TEST_F(SGNSSentenceLearnerTest, sentence_train_short) {
     WillOnce(Return(make_pair(size_t(0), size_t(2))));
   EXPECT_CALL(*token_learner, token_train(0, 2, 5));
   EXPECT_CALL(*token_learner, token_train(0, 1, 5));
+  EXPECT_CALL(*sgd, step(0));
   EXPECT_CALL(*ctx_strategy, size(1, 1)).
     WillOnce(Return(make_pair(size_t(1), size_t(1))));
   EXPECT_CALL(*token_learner, token_train(2, 0, 5));
   EXPECT_CALL(*token_learner, token_train(2, 1, 5));
+  EXPECT_CALL(*sgd, step(2));
   EXPECT_CALL(*ctx_strategy, size(2, 0)).
     WillOnce(Return(make_pair(size_t(2), size_t(0))));
   EXPECT_CALL(*token_learner, token_train(1, 0, 5));
   EXPECT_CALL(*token_learner, token_train(1, 2, 5));
+  EXPECT_CALL(*sgd, step(1));
 
   sentence_learner->sentence_train(words);
 }
@@ -506,14 +512,17 @@ TEST_F(SGNSSentenceLearnerTest, sentence_train_lm_ejected) {
     WillOnce(Return(make_pair(size_t(0), size_t(2))));
   EXPECT_CALL(*token_learner, token_train(0, 2, 5));
   EXPECT_CALL(*token_learner, token_train(0, 1, 5));
+  EXPECT_CALL(*sgd, step(0));
   EXPECT_CALL(*ctx_strategy, size(1, 1)).
     WillOnce(Return(make_pair(size_t(1), size_t(1))));
   EXPECT_CALL(*token_learner, token_train(2, 0, 5));
   EXPECT_CALL(*token_learner, token_train(2, 1, 5));
+  EXPECT_CALL(*sgd, step(2));
   EXPECT_CALL(*ctx_strategy, size(2, 0)).
     WillOnce(Return(make_pair(size_t(2), size_t(0))));
   EXPECT_CALL(*token_learner, token_train(1, 0, 5));
   EXPECT_CALL(*token_learner, token_train(1, 2, 5));
+  EXPECT_CALL(*sgd, step(1));
 
   sentence_learner->sentence_train(words);
 }
@@ -570,11 +579,13 @@ TEST_F(SGNSSentenceLearnerTest, sentence_train_lm_many_tokens) {
   EXPECT_CALL(*token_learner, token_train(1, 2, 5));
   EXPECT_CALL(*token_learner, token_train(1, 1, 5));
   EXPECT_CALL(*token_learner, token_train(1, 0, 5));
+  EXPECT_CALL(*sgd, step(1));
   EXPECT_CALL(*ctx_strategy, size(2, 2)).
     WillOnce(Return(make_pair(size_t(1), size_t(2))));
   EXPECT_CALL(*token_learner, token_train(1, 1, 5));
   EXPECT_CALL(*token_learner, token_train(1, 0, 5));
   EXPECT_CALL(*token_learner, token_train(1, 0, 5));
+  EXPECT_CALL(*sgd, step(1));
   EXPECT_CALL(*ctx_strategy, size(3, 1)).
     WillOnce(Return(make_pair(size_t(0), size_t(0))));
   EXPECT_CALL(*ctx_strategy, size(4, 0)).

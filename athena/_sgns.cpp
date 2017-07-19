@@ -197,8 +197,6 @@ void SGNSTokenLearner::token_train(size_t target_word_idx,
                                      size_t neg_samples) {
   auto model = _model.lock();
 
-  set<long> words_seen;
-
   // initialize target (input) word gradient
   AlignedVector target_word_gradient(
     model->factorization->get_embedding_dim());
@@ -222,7 +220,6 @@ void SGNSTokenLearner::token_train(size_t target_word_idx,
     model->factorization->get_context_embedding(context_word_idx),
     coeff
   );
-  words_seen.insert(context_word_idx);
 
   for (size_t j = 0; j < neg_samples; ++j) {
     // compute contribution of neg-sample word to target (input) word
@@ -245,7 +242,6 @@ void SGNSTokenLearner::token_train(size_t target_word_idx,
       model->factorization->get_context_embedding(neg_sample_word_idx),
       coeff
     );
-    words_seen.insert(neg_sample_word_idx);
   }
 
   // take target (input) word gradient step
@@ -255,11 +251,6 @@ void SGNSTokenLearner::token_train(size_t target_word_idx,
     target_word_gradient.data(),
     model->factorization->get_word_embedding(target_word_idx)
   );
-  words_seen.insert(target_word_idx);
-
-  for (auto it = words_seen.begin(); it != words_seen.end(); ++it) {
-    model->sgd->step(*it);
-  }
 }
 
 void SGNSTokenLearner::serialize(ostream& stream) const { }
@@ -338,6 +329,7 @@ void SGNSSentenceLearner::sentence_train(const vector<string>& words) {
                                             word_ids[i], _neg_samples);
         }
       }
+      model->sgd->step(word_ids[target_word_pos]);
     }
   }
 }
