@@ -108,6 +108,24 @@ TEST(sigmoid_test, threshold_negative) {
   EXPECT_NEAR(0, sigmoid(-(SIGMOID_ARG_THRESHOLD + 1)), EPS);
 }
 
+TEST(fast_sigmoid_test, positive) {
+  EXPECT_NEAR(0.8807971, fast_sigmoid(2), EPS);
+}
+
+TEST(fast_sigmoid_test, negative) {
+  EXPECT_NEAR(0.1192029, fast_sigmoid(-2), EPS);
+}
+
+TEST(fast_sigmoid_test, threshold_positive) {
+  EXPECT_LT(fast_sigmoid(SIGMOID_ARG_THRESHOLD - 1), 1);
+  EXPECT_NEAR(1, fast_sigmoid(SIGMOID_ARG_THRESHOLD + 1), EPS);
+}
+
+TEST(fast_sigmoid_test, threshold_negative) {
+  EXPECT_GT(fast_sigmoid(-(SIGMOID_ARG_THRESHOLD - 1)), 0);
+  EXPECT_NEAR(0, fast_sigmoid(-(SIGMOID_ARG_THRESHOLD + 1)), EPS);
+}
+
 TEST(seed_test, seed) {
   seed(7);
   uniform_real_distribution<float> d;

@@ -19,7 +19,7 @@
 #define SIGMOID_ARG_THRESHOLD 11.f
 
 // must be at least two; preferably odd so there is a point at zero
-#define SIGMOID_GRID_SIZE 20001
+#define FAST_SIGMOID_GRID_SIZE 20001
 
 // precision of equals on doubles (vectors of doubles)
 #define DOUBLE_NEAR_THRESHOLD 1e-8
@@ -85,6 +85,7 @@ bool near(const std::vector<T>& x, const std::vector<T>& y) {
 
 // Compute 1 / (1 + exp(-x)) .
 float sigmoid(float x);
+float fast_sigmoid(float x);
 
 
 // Seed the random number generator(s).
