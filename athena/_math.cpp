@@ -24,6 +24,7 @@ using namespace std;
 
 
 static vector<PRNG> prngs;
+static vector<float> sigmoid_grid;
 
 
 AlignedVector::AlignedVector(size_t size): _data(0), _size(0) {
@@ -128,12 +129,25 @@ bool near(const AlignedVector& x, const AlignedVector& y) {
 
 
 float sigmoid(float x) {
-  if (x > SIGMOID_ARG_THRESHOLD) {
-    return 1.f;
-  } else if (x < -SIGMOID_ARG_THRESHOLD) {
+  const size_t max_i = SIGMOID_GRID_SIZE - 1;
+  if (sigmoid_grid.size() != SIGMOID_GRID_SIZE) {
+    #pragma omp critical(sigmoid_grid)
+    {
+      sigmoid_grid.resize(SIGMOID_GRID_SIZE, 1.f);
+      for (size_t i = 0; i < SIGMOID_GRID_SIZE; ++i) {
+        const float i_x =
+          SIGMOID_ARG_THRESHOLD * (i / (float) max_i - 0.5f) * 2.f;
+        sigmoid_grid[i] = 1.f / (1.f + exp(-i_x));
+      }
+    }
+  }
+  const long long x_i = max_i * ((x / SIGMOID_ARG_THRESHOLD) + 1.f) / 2.f;
+  if (x_i < 0) {
     return 0.f;
+  } else if (x_i >= SIGMOID_GRID_SIZE) {
+    return 1.f;
   } else {
-    return 1.f / (1.f + exp(-x));
+    return sigmoid_grid[x_i];
   }
 }
 

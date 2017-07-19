@@ -18,6 +18,9 @@
 // sigmoid is hard-coded to 1 (or 0) beyond this threshold (two-sided).
 #define SIGMOID_ARG_THRESHOLD 11.f
 
+// must be at least two; preferably odd so there is a point at zero
+#define SIGMOID_GRID_SIZE 20001
+
 // precision of equals on doubles (vectors of doubles)
 #define DOUBLE_NEAR_THRESHOLD 1e-8
 
