@@ -196,28 +196,32 @@ void SGNSTokenLearner::token_train(size_t target_word_idx,
                                      size_t context_word_idx,
                                      size_t neg_samples) {
   auto model = _model.lock();
+  auto factorization(model->factorization);
+  auto sgd(model->sgd);
+  auto neg_sampling_strategy(model->neg_sampling_strategy);
+  auto language_model(model->language_model);
 
   // initialize target (input) word gradient
   AlignedVector target_word_gradient(
-    model->factorization->get_embedding_dim());
+    factorization->get_embedding_dim());
   memset(target_word_gradient.data(), 0,
-    sizeof(float) * model->factorization->get_embedding_dim());
+    sizeof(float) * factorization->get_embedding_dim());
 
   // compute contribution of context (output) word to target (input)
   // word gradient, take context word gradient step
   const float coeff = compute_gradient_coeff(target_word_idx,
                                               context_word_idx, false);
   cblas_saxpy(
-    model->factorization->get_embedding_dim(),
+    factorization->get_embedding_dim(),
     coeff,
-    model->factorization->get_context_embedding(context_word_idx), 1,
+    factorization->get_context_embedding(context_word_idx), 1,
     target_word_gradient.data(), 1
   );
-  model->sgd->scaled_gradient_update(
+  sgd->scaled_gradient_update(
     context_word_idx,
-    model->factorization->get_embedding_dim(),
-    model->factorization->get_word_embedding(target_word_idx),
-    model->factorization->get_context_embedding(context_word_idx),
+    factorization->get_embedding_dim(),
+    factorization->get_word_embedding(target_word_idx),
+    factorization->get_context_embedding(context_word_idx),
     coeff
   );
 
@@ -225,31 +229,31 @@ void SGNSTokenLearner::token_train(size_t target_word_idx,
     // compute contribution of neg-sample word to target (input) word
     // gradient, take neg-sample word gradient step
     const long neg_sample_word_idx =
-      model->neg_sampling_strategy->sample_idx(*(model->language_model));
+      neg_sampling_strategy->sample_idx(*language_model);
 
     const float coeff = compute_gradient_coeff(target_word_idx,
                                                neg_sample_word_idx, true);
     cblas_saxpy(
-      model->factorization->get_embedding_dim(),
+      factorization->get_embedding_dim(),
       coeff,
-      model->factorization->get_context_embedding(neg_sample_word_idx), 1,
+      factorization->get_context_embedding(neg_sample_word_idx), 1,
       target_word_gradient.data(), 1
     );
-    model->sgd->scaled_gradient_update(
+    sgd->scaled_gradient_update(
       neg_sample_word_idx,
-      model->factorization->get_embedding_dim(),
-      model->factorization->get_word_embedding(target_word_idx),
-      model->factorization->get_context_embedding(neg_sample_word_idx),
+      factorization->get_embedding_dim(),
+      factorization->get_word_embedding(target_word_idx),
+      factorization->get_context_embedding(neg_sample_word_idx),
       coeff
     );
   }
 
   // take target (input) word gradient step
-  model->sgd->gradient_update(
+  sgd->gradient_update(
     target_word_idx,
-    model->factorization->get_embedding_dim(),
+    factorization->get_embedding_dim(),
     target_word_gradient.data(),
-    model->factorization->get_word_embedding(target_word_idx)
+    factorization->get_word_embedding(target_word_idx)
   );
 }
 
