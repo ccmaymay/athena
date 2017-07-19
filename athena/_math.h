@@ -18,9 +18,6 @@
 // sigmoid is hard-coded to 1 (or 0) beyond this threshold (two-sided).
 #define SIGMOID_ARG_THRESHOLD 11.f
 
-// must be at least two; preferably odd so there is a point at zero
-#define FAST_SIGMOID_GRID_SIZE 20001
-
 // precision of equals on doubles (vectors of doubles)
 #define DOUBLE_NEAR_THRESHOLD 1e-8
 
@@ -31,6 +28,9 @@
   ((n) + ((n) % (k) == 0 ? 0 : (k) - ((n) % (k))))
 
 #define VECTOR_ALIGNMENT 64
+
+// must be at least two
+#define DEFAULT_FAST_SIGMOID_GRID_SIZE 1000
 
 
 typedef std::linear_congruential_engine<size_t,25214903917ull,11ull,1ull<<48>
@@ -85,7 +85,7 @@ bool near(const std::vector<T>& x, const std::vector<T>& y) {
 
 // Compute 1 / (1 + exp(-x)) .
 float sigmoid(float x);
-float fast_sigmoid(float x);
+float fast_sigmoid(float x, size_t grid_size = DEFAULT_FAST_SIGMOID_GRID_SIZE);
 
 
 // Seed the random number generator(s).

@@ -139,13 +139,13 @@ float sigmoid(float x) {
 }
 
 
-float fast_sigmoid(float x) {
-  const size_t max_i = FAST_SIGMOID_GRID_SIZE - 1;
-  if (fast_sigmoid_grid.size() != FAST_SIGMOID_GRID_SIZE) {
+float fast_sigmoid(float x, size_t grid_size) {
+  const size_t max_i = grid_size - 1;
+  if (fast_sigmoid_grid.size() != grid_size) {
     #pragma omp critical(fast_sigmoid_grid)
     {
-      fast_sigmoid_grid.resize(FAST_SIGMOID_GRID_SIZE, 1.f);
-      for (size_t i = 0; i < FAST_SIGMOID_GRID_SIZE; ++i) {
+      fast_sigmoid_grid.resize(grid_size, 1.f);
+      for (size_t i = 0; i < grid_size; ++i) {
         const float i_x =
           SIGMOID_ARG_THRESHOLD * (i / (float) max_i - 0.5f) * 2.f;
         fast_sigmoid_grid[i] = 1.f / (1.f + exp(-i_x));
@@ -155,7 +155,7 @@ float fast_sigmoid(float x) {
   const long long x_i = max_i * ((x / SIGMOID_ARG_THRESHOLD) + 1.f) / 2.f;
   if (x_i < 0) {
     return 0.f;
-  } else if (x_i >= FAST_SIGMOID_GRID_SIZE) {
+  } else if (x_i >= (long long) grid_size) {
     return 1.f;
   } else {
     return fast_sigmoid_grid[x_i];
