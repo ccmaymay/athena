@@ -111,7 +111,7 @@ long SGNSTokenLearner::find_context_nearest_neighbor_idx(size_t left_context,
       if (i != left_context) {
         const long context_word_idx = word_ids[i];
         if (context_word_idx >= 0) {
-          log_prob_ctx_given_candidate += sigmoid(
+          log_prob_ctx_given_candidate += fast_sigmoid(
             cblas_sdot(
               model->factorization->get_embedding_dim(),
               model->factorization->get_word_embedding(candidate_word_idx), 1,
@@ -175,7 +175,7 @@ float SGNSTokenLearner::compute_gradient_coeff(long target_word_idx,
                                            long context_word_idx,
                                            bool negative_sample) const {
   auto model = _model.lock();
-  return (negative_sample ? 0 : 1) - sigmoid(cblas_sdot(
+  return (negative_sample ? 0 : 1) - fast_sigmoid(cblas_sdot(
     model->factorization->get_embedding_dim(),
     model->factorization->get_word_embedding(target_word_idx), 1,
     model->factorization->get_context_embedding(context_word_idx), 1

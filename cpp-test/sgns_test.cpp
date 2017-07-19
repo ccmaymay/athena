@@ -54,44 +54,44 @@ TEST_F(SGNSTokenLearnerTest, context_contains_oov) {
 
 TEST_F(SGNSTokenLearnerTest, compute_gradient_coeff) {
   EXPECT_NEAR(1 - sigmoid(.1 * .4 + (-.2) * 0),
-              token_learner->compute_gradient_coeff(0, 0, false), EPS);
+              token_learner->compute_gradient_coeff(0, 0, false), FAST_EPS);
   EXPECT_NEAR(1 - sigmoid(.1 * (-.3) + (-.2) * .2),
-              token_learner->compute_gradient_coeff(0, 1, false), EPS);
+              token_learner->compute_gradient_coeff(0, 1, false), FAST_EPS);
   EXPECT_NEAR(1 - sigmoid(.1 * .1 + (-.2) * (-.2)),
-              token_learner->compute_gradient_coeff(0, 2, false), EPS);
+              token_learner->compute_gradient_coeff(0, 2, false), FAST_EPS);
   EXPECT_NEAR(1 - sigmoid((-.3) * .4 + .2 * 0),
-              token_learner->compute_gradient_coeff(1, 0, false), EPS);
+              token_learner->compute_gradient_coeff(1, 0, false), FAST_EPS);
   EXPECT_NEAR(1 - sigmoid((-.3) * (-.3) + .2 * .2),
-              token_learner->compute_gradient_coeff(1, 1, false), EPS);
+              token_learner->compute_gradient_coeff(1, 1, false), FAST_EPS);
   EXPECT_NEAR(1 - sigmoid((-.3) * .1 + .2 * (-.2)),
-              token_learner->compute_gradient_coeff(1, 2, false), EPS);
+              token_learner->compute_gradient_coeff(1, 2, false), FAST_EPS);
   EXPECT_NEAR(1 - sigmoid(.4 * .4 + 0 * 0),
-              token_learner->compute_gradient_coeff(2, 0, false), EPS);
+              token_learner->compute_gradient_coeff(2, 0, false), FAST_EPS);
   EXPECT_NEAR(1 - sigmoid(.4 * (-.3) + 0 * .2),
-              token_learner->compute_gradient_coeff(2, 1, false), EPS);
+              token_learner->compute_gradient_coeff(2, 1, false), FAST_EPS);
   EXPECT_NEAR(1 - sigmoid(.4 * .1 + 0 * (-.2)),
-              token_learner->compute_gradient_coeff(2, 2, false), EPS);
+              token_learner->compute_gradient_coeff(2, 2, false), FAST_EPS);
 }
 
 TEST_F(SGNSTokenLearnerTest, compute_gradient_coeff_negative) {
   EXPECT_NEAR(0 - sigmoid(.1 * .4 + (-.2) * 0),
-              token_learner->compute_gradient_coeff(0, 0, true), EPS);
+              token_learner->compute_gradient_coeff(0, 0, true), FAST_EPS);
   EXPECT_NEAR(0 - sigmoid(.1 * (-.3) + (-.2) * .2),
-              token_learner->compute_gradient_coeff(0, 1, true), EPS);
+              token_learner->compute_gradient_coeff(0, 1, true), FAST_EPS);
   EXPECT_NEAR(0 - sigmoid(.1 * .1 + (-.2) * (-.2)),
-              token_learner->compute_gradient_coeff(0, 2, true), EPS);
+              token_learner->compute_gradient_coeff(0, 2, true), FAST_EPS);
   EXPECT_NEAR(0 - sigmoid((-.3) * .4 + .2 * 0),
-              token_learner->compute_gradient_coeff(1, 0, true), EPS);
+              token_learner->compute_gradient_coeff(1, 0, true), FAST_EPS);
   EXPECT_NEAR(0 - sigmoid((-.3) * (-.3) + .2 * .2),
-              token_learner->compute_gradient_coeff(1, 1, true), EPS);
+              token_learner->compute_gradient_coeff(1, 1, true), FAST_EPS);
   EXPECT_NEAR(0 - sigmoid((-.3) * .1 + .2 * (-.2)),
-              token_learner->compute_gradient_coeff(1, 2, true), EPS);
+              token_learner->compute_gradient_coeff(1, 2, true), FAST_EPS);
   EXPECT_NEAR(0 - sigmoid(.4 * .4 + 0 * 0),
-              token_learner->compute_gradient_coeff(2, 0, true), EPS);
+              token_learner->compute_gradient_coeff(2, 0, true), FAST_EPS);
   EXPECT_NEAR(0 - sigmoid(.4 * (-.3) + 0 * .2),
-              token_learner->compute_gradient_coeff(2, 1, true), EPS);
+              token_learner->compute_gradient_coeff(2, 1, true), FAST_EPS);
   EXPECT_NEAR(0 - sigmoid(.4 * .1 + 0 * (-.2)),
-              token_learner->compute_gradient_coeff(2, 2, true), EPS);
+              token_learner->compute_gradient_coeff(2, 2, true), FAST_EPS);
 }
 
 TEST_F(SGNSTokenLearnerTest, token_train_neg1) {
@@ -114,19 +114,19 @@ TEST_F(SGNSTokenLearnerTest, token_train_neg1) {
   EXPECT_NEAR(.2, factorization->get_word_embedding(1)[1], EPS);
   EXPECT_NEAR(.4 + rho * (1 - sigmoid(.4 * (-.3) + 0 * .2)) * (-.3) +
                   rho * adj0 * (0 - sigmoid(.4 * .4 + 0 * 0)) * .4,
-              factorization->get_word_embedding(2)[0], EPS);
+              factorization->get_word_embedding(2)[0], FAST_EPS);
   EXPECT_NEAR(0 + rho * (1 - sigmoid(.4 * (-.3) + 0 * .2)) * .2 +
                   rho * adj0 * (0 - sigmoid(.4 * .4 + 0 * 0)) * 0,
-              factorization->get_word_embedding(2)[1], EPS);
+              factorization->get_word_embedding(2)[1], FAST_EPS);
 
   EXPECT_NEAR(.4 + rho * adj0 * (0 - sigmoid(.4 * .4 + 0 * 0)) * .4,
-              factorization->get_context_embedding(0)[0], EPS);
+              factorization->get_context_embedding(0)[0], FAST_EPS);
   EXPECT_NEAR(0 + rho * adj0 * (0 - sigmoid(.4 * .4 + 0 * 0)) * 0,
-              factorization->get_context_embedding(0)[1], EPS);
+              factorization->get_context_embedding(0)[1], FAST_EPS);
   EXPECT_NEAR(-.3 + rho * (1 - sigmoid(-.3 * .4 + .2 * 0)) * .4,
-              factorization->get_context_embedding(1)[0], EPS);
+              factorization->get_context_embedding(1)[0], FAST_EPS);
   EXPECT_NEAR(.2 + rho * (1 - sigmoid(-.3 * .4 + .2 * 0)) * 0,
-              factorization->get_context_embedding(1)[1], EPS);
+              factorization->get_context_embedding(1)[1], FAST_EPS);
   EXPECT_NEAR(.1, factorization->get_context_embedding(2)[0], EPS);
   EXPECT_NEAR(-.2, factorization->get_context_embedding(2)[1], EPS);
 
@@ -155,21 +155,21 @@ TEST_F(SGNSTokenLearnerTest, token_train_neg1_partial_vocab_coverage) {
   EXPECT_NEAR(.2, factorization->get_word_embedding(1)[1], EPS);
   EXPECT_NEAR(.4 + rho * (1 - sigmoid(.4 * (-.3) + 0 * .2)) * (-.3) +
                   rho * adj2 * (0 - sigmoid(.4 * .1 + 0 * (-.2))) * .1,
-              factorization->get_word_embedding(2)[0], EPS);
+              factorization->get_word_embedding(2)[0], FAST_EPS);
   EXPECT_NEAR(0 + rho * (1 - sigmoid(.4 * (-.3) + 0 * .2)) * .2 +
                   rho * adj2 * (0 - sigmoid(.4 * .1 + 0 * (-.2))) * (-.2),
-              factorization->get_word_embedding(2)[1], EPS);
+              factorization->get_word_embedding(2)[1], FAST_EPS);
 
   EXPECT_NEAR(.4, factorization->get_context_embedding(0)[0], EPS);
   EXPECT_NEAR(0, factorization->get_context_embedding(0)[1], EPS);
   EXPECT_NEAR(-.3 + rho * (1 - sigmoid(-.3 * .4 + .2 * 0)) * .4,
-              factorization->get_context_embedding(1)[0], EPS);
+              factorization->get_context_embedding(1)[0], FAST_EPS);
   EXPECT_NEAR(.2 + rho * (1 - sigmoid(-.3 * .4 + .2 * 0)) * 0,
-              factorization->get_context_embedding(1)[1], EPS);
+              factorization->get_context_embedding(1)[1], FAST_EPS);
   EXPECT_NEAR(.1 + rho * adj2 * (0 - sigmoid(.1 * .4 + (-.2) * 0)) * .4,
-              factorization->get_context_embedding(2)[0], EPS);
+              factorization->get_context_embedding(2)[0], FAST_EPS);
   EXPECT_NEAR(-.2 + rho * adj2 * (0 - sigmoid(.1 * .4 + (-.2) * 0)) * 0,
-              factorization->get_context_embedding(2)[1], EPS);
+              factorization->get_context_embedding(2)[1], FAST_EPS);
 
   EXPECT_NEAR(sgd->get_rho(0), rho0, EPS);
   EXPECT_LT(sgd->get_rho(1), rho1);
@@ -199,7 +199,7 @@ TEST_F(SGNSTokenLearnerTest, token_train_neg2) {
                     .1 * (-.3 + rho * w0c1_coeff * .1) +
                     (-.2) * (.2 + rho * w0c1_coeff * (-.2))
                   )) * (-.3 + rho * w0c1_coeff * .1),
-              factorization->get_word_embedding(0)[0], EPS);
+              factorization->get_word_embedding(0)[0], FAST_EPS);
   EXPECT_NEAR(-.2 + rho * w0c1_coeff * .2 +
                    rho * adj2 * (0 - sigmoid(
                      .1 * .1 + (-.2) * (-.2)
@@ -208,7 +208,7 @@ TEST_F(SGNSTokenLearnerTest, token_train_neg2) {
                      .1 * (-.3 + rho * w0c1_coeff * .1) +
                      (-.2) * (.2 + rho * w0c1_coeff * (-.2))
                    )) * (.2 + rho * w0c1_coeff * (-.2)),
-              factorization->get_word_embedding(0)[1], EPS);
+              factorization->get_word_embedding(0)[1], FAST_EPS);
   EXPECT_NEAR(-.3, factorization->get_word_embedding(1)[0], EPS);
   EXPECT_NEAR(.2, factorization->get_word_embedding(1)[1], EPS);
   EXPECT_NEAR(.4, factorization->get_word_embedding(2)[0], EPS);
@@ -221,19 +221,19 @@ TEST_F(SGNSTokenLearnerTest, token_train_neg2) {
                      .1 * (-.3 + rho * w0c1_coeff * .1) +
                      (-.2) * (.2 + rho * w0c1_coeff * (-.2))
                    )) * .1,
-              factorization->get_context_embedding(1)[0], EPS);
+              factorization->get_context_embedding(1)[0], FAST_EPS);
   EXPECT_NEAR(.2 + rho * w0c1_coeff * (-.2) +
                   rho * adj1 * (0 - sigmoid(
                     .1 * (-.3 + rho * w0c1_coeff * .1) +
                     (-.2) * (.2 + rho * w0c1_coeff * (-.2))
                   )) * (-.2),
-              factorization->get_context_embedding(1)[1], EPS);
+              factorization->get_context_embedding(1)[1], FAST_EPS);
   EXPECT_NEAR(.1 + rho * adj2 * (0 - sigmoid(.1 * .1 + (-.2) * (-.2))) * .1,
-              factorization->get_context_embedding(2)[0], EPS);
+              factorization->get_context_embedding(2)[0], FAST_EPS);
   EXPECT_NEAR(-.2 + rho * adj2 * (0 - sigmoid(
                 .1 * .1 + (-.2) * (-.2)
               )) * (-.2),
-              factorization->get_context_embedding(2)[1], EPS);
+              factorization->get_context_embedding(2)[1], FAST_EPS);
 
   EXPECT_LT(sgd->get_rho(0), rho0);
   EXPECT_LT(sgd->get_rho(1), rho1);

@@ -7,6 +7,7 @@
 
 
 #define EPS 1e-4
+#define FAST_EPS 1e-2
 
 
 template <class T>
