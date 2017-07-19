@@ -7,7 +7,7 @@ embeddings with the space-saving algorithm.  Code released for the
 ["Streaming Word Embeddings with the Space-Saving Algorithm"
 (arXiv:1704.07463) manuscript](https://arxiv.org/abs/1704.07463)
 can be found in the
-[arxiv-1704-07463v1 tag](https://github.com/cjmay/word2vec/tags/arxiv-1704-07463v1).
+[arxiv-1704-07463v1 tag](https://github.com/cjmay/athena/tree/arxiv-1704-07463v1).
 
 Athena comprises a C++ library accessible in Python using Cython.
 The source code is located in `athena/` with some general-purpose
