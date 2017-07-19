@@ -698,11 +698,36 @@ bool EmpiricalSamplingStrategy::equals(const SamplingStrategy& other) const {
 
 void ReservoirSamplingStrategy::reset(const LanguageModel& language_model,
                                       const CountNormalizer& normalizer) {
-  const vector<float> weights(normalizer.normalize(language_model.counts()));
-  discrete_distribution<size_t> d(weights.begin(), weights.end());
+  // we use a deterministic scheme rather than sampling for the sake
+  // of speed (in the case where the reservoir sampler is large and
+  // the vocabulary is small)
+  vector<float> weights(normalizer.normalize(language_model.counts()));
   _reservoir_sampler->clear();
-  for (size_t i = 0; i < _reservoir_sampler->size(); ++i) {
-    step(language_model, d(get_urng()));
+
+  // first insert elements into reservoir proportional to their
+  // probability, rounding down; as we do so write the remaining
+  // fractional insertion counts back to `weights`
+  size_t num_inserted = 0;
+  for (size_t word_idx = 0; word_idx < weights.size(); ++word_idx) {
+    const float weight(weights[word_idx] * _reservoir_sampler->size());
+    for (size_t i = 1; i <= weight; ++i) {
+      step(language_model, word_idx);
+      ++num_inserted;
+    }
+    weights[word_idx] = weight - (long) weight;
+  }
+
+  // now sort words by their remaining fractional counts
+  vector<pair<size_t,float> > sorted_words(weights.size());
+  for (size_t i = 0; i < weights.size(); ++i) {
+    sorted_words[i] = make_pair(i, weights[i]);
+  }
+  ::sort(sorted_words.rbegin(), sorted_words.rend(),
+         pair_second_cmp<size_t,float>);
+
+  // finally fill reservoir according to those fractional counts
+  for (size_t i = 0; num_inserted + i < _reservoir_sampler->size(); ++i) {
+    step(language_model, sorted_words[i % sorted_words.size()].first);
   }
 }
 
