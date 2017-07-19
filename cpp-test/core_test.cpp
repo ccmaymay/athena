@@ -462,7 +462,6 @@ TEST_F(ReservoirSamplingStrategyTest, reset) {
     EXPECT_CALL(*reset_normalizer, normalize(reset_counts)).
       WillRepeatedly(Return(normalized_reset_counts));
     EXPECT_CALL(*sampler, clear());
-    EXPECT_CALL(*sampler, size()).WillRepeatedly(Return(num_reset_samples));
   }
 
   vector<Counter> counters(3);
@@ -473,6 +472,7 @@ TEST_F(ReservoirSamplingStrategyTest, reset) {
   EXPECT_CALL(*sampler, insert(0)).WillRepeatedly(DoAll(Assign(&(counters[0]), 1), Return(-1L)));
   EXPECT_CALL(*sampler, insert(1)).WillRepeatedly(DoAll(Assign(&(counters[1]), 1), Return(-1L)));
   EXPECT_CALL(*sampler, insert(2)).WillRepeatedly(DoAll(Assign(&(counters[2]), 1), Return(-1L)));
+  EXPECT_CALL(*sampler, size()).WillRepeatedly(Return(num_reset_samples));
 
   strategy->reset(*reset_lm, *reset_normalizer);
 
