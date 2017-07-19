@@ -109,21 +109,39 @@ TEST(sigmoid_test, threshold_negative) {
 }
 
 TEST(fast_sigmoid_test, positive) {
-  EXPECT_NEAR(0.8807971, fast_sigmoid(2), EPS);
+  EXPECT_NEAR(0.8807971, fast_sigmoid(2), 0.01f);
 }
 
 TEST(fast_sigmoid_test, negative) {
-  EXPECT_NEAR(0.1192029, fast_sigmoid(-2), EPS);
+  EXPECT_NEAR(0.1192029, fast_sigmoid(-2), 0.01f);
 }
 
 TEST(fast_sigmoid_test, threshold_positive) {
   EXPECT_LT(fast_sigmoid(SIGMOID_ARG_THRESHOLD - 1), 1);
-  EXPECT_NEAR(1, fast_sigmoid(SIGMOID_ARG_THRESHOLD + 1), EPS);
+  EXPECT_NEAR(1, fast_sigmoid(SIGMOID_ARG_THRESHOLD + 1), 0.01f);
 }
 
 TEST(fast_sigmoid_test, threshold_negative) {
   EXPECT_GT(fast_sigmoid(-(SIGMOID_ARG_THRESHOLD - 1)), 0);
-  EXPECT_NEAR(0, fast_sigmoid(-(SIGMOID_ARG_THRESHOLD + 1)), EPS);
+  EXPECT_NEAR(0, fast_sigmoid(-(SIGMOID_ARG_THRESHOLD + 1)), 0.01f);
+}
+
+TEST(fast_sigmoid_test, big_positive) {
+  EXPECT_NEAR(0.8807971, fast_sigmoid(2, 100000), EPS);
+}
+
+TEST(fast_sigmoid_test, big_negative) {
+  EXPECT_NEAR(0.1192029, fast_sigmoid(-2, 100000), EPS);
+}
+
+TEST(fast_sigmoid_test, big_threshold_positive) {
+  EXPECT_LT(fast_sigmoid(SIGMOID_ARG_THRESHOLD - 1, 100000), 1);
+  EXPECT_NEAR(1, fast_sigmoid(SIGMOID_ARG_THRESHOLD + 1, 100000), EPS);
+}
+
+TEST(fast_sigmoid_test, big_threshold_negative) {
+  EXPECT_GT(fast_sigmoid(-(SIGMOID_ARG_THRESHOLD - 1), 100000), 0);
+  EXPECT_NEAR(0, fast_sigmoid(-(SIGMOID_ARG_THRESHOLD + 1), 100000), EPS);
 }
 
 TEST(seed_test, seed) {
