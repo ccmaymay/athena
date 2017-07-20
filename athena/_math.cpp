@@ -83,9 +83,9 @@ void AlignedVector::serialize(ostream& stream) const {
   stream.write(reinterpret_cast<const char*>(_data), _size * sizeof(float));
 }
 
-shared_ptr<AlignedVector> AlignedVector::deserialize(istream& stream) {
+AlignedVector* AlignedVector::deserialize(istream& stream) {
   auto size(*Serializer<size_t>::deserialize(stream));
-  auto container(make_shared<AlignedVector>(size));
+  auto container(new AlignedVector(size));
   stream.read(reinterpret_cast<char*>(container->data()),
               size * sizeof(float));
   return container;
@@ -216,10 +216,10 @@ void CountNormalizer::serialize(ostream& stream) const {
   Serializer<float>::serialize(_offset, stream);
 }
 
-shared_ptr<CountNormalizer> CountNormalizer::deserialize(istream& stream) {
+CountNormalizer* CountNormalizer::deserialize(istream& stream) {
   auto exponent(*Serializer<float>::deserialize(stream));
   auto offset(*Serializer<float>::deserialize(stream));
-  return make_shared<CountNormalizer>(exponent, offset);
+  return new CountNormalizer(exponent, offset);
 }
 
 bool CountNormalizer::equals(const CountNormalizer& other) const {
@@ -265,10 +265,10 @@ void NaiveSampler::serialize(ostream& stream) const {
   Serializer<vector<float> >::serialize(_probability_table, stream);
 }
 
-shared_ptr<NaiveSampler> NaiveSampler::deserialize(istream& stream) {
+NaiveSampler* NaiveSampler::deserialize(istream& stream) {
   auto size(*Serializer<size_t>::deserialize(stream));
   auto probability_table(Serializer<vector<float> >::deserialize(stream));
-  return make_shared<NaiveSampler>(
+  return new NaiveSampler(
     size,
     move(*probability_table)
   );
@@ -353,11 +353,11 @@ void AliasSampler::serialize(ostream& stream) const {
   Serializer<vector<float> >::serialize(_probability_table, stream);
 }
 
-shared_ptr<AliasSampler> AliasSampler::deserialize(istream& stream) {
+AliasSampler* AliasSampler::deserialize(istream& stream) {
   auto size(*Serializer<size_t>::deserialize(stream));
   auto alias_table(Serializer<vector<size_t> >::deserialize(stream));
   auto probability_table(Serializer<vector<float> >::deserialize(stream));
-  return make_shared<AliasSampler>(
+  return new AliasSampler(
     size,
     move(*alias_table),
     move(*probability_table)
@@ -408,9 +408,9 @@ void Discretization::serialize(ostream& stream) const {
   Serializer<vector<long> >::serialize(_samples, stream);
 }
 
-shared_ptr<Discretization> Discretization::deserialize(istream& stream) {
+Discretization* Discretization::deserialize(istream& stream) {
   auto samples(Serializer<vector<long> >::deserialize(stream));
-  return make_shared<Discretization>(
+  return new Discretization(
     move(*samples)
   );
 }

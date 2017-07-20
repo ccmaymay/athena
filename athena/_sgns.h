@@ -22,16 +22,16 @@ class SubsamplingSGNSSentenceLearner;
 
 class SGNSTokenLearner {
   public:
-    std::shared_ptr<WordContextFactorization> factorization;
-    std::shared_ptr<SamplingStrategy> neg_sampling_strategy;
-    std::shared_ptr<LanguageModel> language_model;
-    std::shared_ptr<SGD> sgd;
+    WordContextFactorization* factorization;
+    ReservoirSamplingStrategy* neg_sampling_strategy;
+    NaiveLanguageModel* language_model;
+    SGD* sgd;
 
     SGNSTokenLearner(
-        std::shared_ptr<WordContextFactorization> factorization_,
-        std::shared_ptr<SamplingStrategy> neg_sampling_strategy_,
-        std::shared_ptr<LanguageModel> language_model_,
-        std::shared_ptr<SGD> sgd_):
+        WordContextFactorization* factorization_,
+        ReservoirSamplingStrategy* neg_sampling_strategy_,
+        NaiveLanguageModel* language_model_,
+        SGD* sgd_):
             factorization(factorization_),
             neg_sampling_strategy(neg_sampling_strategy_),
             language_model(language_model_),
@@ -53,7 +53,7 @@ class SGNSTokenLearner {
 
     virtual bool equals(const SGNSTokenLearner& other) const;
     virtual void serialize(std::ostream& stream) const;
-    static std::shared_ptr<SGNSTokenLearner> deserialize(std::istream& stream);
+    static SGNSTokenLearner* deserialize(std::istream& stream);
 
   private:
     void _context_word_gradient(long target_word, long context_word);
@@ -69,16 +69,16 @@ class SGNSTokenLearner {
 
 class SGNSSentenceLearner {
   public:
-    std::shared_ptr<SGNSTokenLearner> token_learner;
-    std::shared_ptr<ContextStrategy> ctx_strategy;
+    SGNSTokenLearner* token_learner;
+    ContextStrategy* ctx_strategy;
 
   private:
     size_t _neg_samples;
     bool _propagate_retained;
 
   public:
-    SGNSSentenceLearner(std::shared_ptr<SGNSTokenLearner> token_learner_,
-        std::shared_ptr<ContextStrategy> ctx_strategy_,
+    SGNSSentenceLearner(SGNSTokenLearner* token_learner_,
+        ContextStrategy* ctx_strategy_,
         size_t neg_samples, bool propagate_retained):
       token_learner(token_learner_),
       ctx_strategy(ctx_strategy_),
@@ -90,7 +90,7 @@ class SGNSSentenceLearner {
 
     virtual bool equals(const SGNSSentenceLearner& other) const;
     virtual void serialize(std::ostream& stream) const;
-    static std::shared_ptr<SGNSSentenceLearner> deserialize(std::istream& stream);
+    static SGNSSentenceLearner* deserialize(std::istream& stream);
 
   private:
     SGNSSentenceLearner(const SGNSSentenceLearner& s);
@@ -102,14 +102,14 @@ class SGNSSentenceLearner {
 
 class SubsamplingSGNSSentenceLearner {
   public:
-    std::shared_ptr<SGNSSentenceLearner> sentence_learner;
+    SGNSSentenceLearner* sentence_learner;
 
   private:
     bool _propagate_discarded;
 
   public:
     SubsamplingSGNSSentenceLearner(
-        std::shared_ptr<SGNSSentenceLearner> sentence_learner_,
+        SGNSSentenceLearner* sentence_learner_,
         bool propagate_discarded):
       sentence_learner(sentence_learner_),
       _propagate_discarded(propagate_discarded) { }
@@ -118,7 +118,7 @@ class SubsamplingSGNSSentenceLearner {
 
     virtual bool equals(const SubsamplingSGNSSentenceLearner& other) const;
     virtual void serialize(std::ostream& stream) const;
-    static std::shared_ptr<SubsamplingSGNSSentenceLearner> deserialize(std::istream& stream);
+    static SubsamplingSGNSSentenceLearner* deserialize(std::istream& stream);
 
   private:
     SubsamplingSGNSSentenceLearner(const SubsamplingSGNSSentenceLearner& s);

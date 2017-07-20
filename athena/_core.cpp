@@ -22,7 +22,7 @@ using namespace std;
 //
 
 
-shared_ptr<LanguageModel> LanguageModel::deserialize(istream& stream) {
+LanguageModel* LanguageModel::deserialize(istream& stream) {
   auto derived(*Serializer<int>::deserialize(stream));
   switch (derived) {
     case naive_lm:
@@ -155,14 +155,14 @@ void NaiveLanguageModel::serialize(ostream& stream) const {
   Serializer<vector<string> >::serialize(_words, stream);
 }
 
-shared_ptr<NaiveLanguageModel> NaiveLanguageModel::deserialize(istream& stream) {
+NaiveLanguageModel* NaiveLanguageModel::deserialize(istream& stream) {
   auto subsample_threshold(*Serializer<float>::deserialize(stream));
   auto size(*Serializer<size_t>::deserialize(stream));
   auto total(*Serializer<size_t>::deserialize(stream));
   auto counters(Serializer<vector<size_t> >::deserialize(stream));
   auto word_ids(Serializer<unordered_map<string,long> >::deserialize(stream));
   auto words(Serializer<vector<string> >::deserialize(stream));
-  return make_shared<NaiveLanguageModel>(
+  return new NaiveLanguageModel(
     subsample_threshold,
     size,
     total,
@@ -290,7 +290,7 @@ void SpaceSavingLanguageModel::serialize(ostream& stream) const {
   Serializer<vector<string> >::serialize(_words, stream);
 }
 
-shared_ptr<SpaceSavingLanguageModel>
+SpaceSavingLanguageModel*
     SpaceSavingLanguageModel::deserialize(istream& stream) {
   auto subsample_threshold(*Serializer<float>::deserialize(stream));
   auto num_counters(*Serializer<size_t>::deserialize(stream));
@@ -302,7 +302,7 @@ shared_ptr<SpaceSavingLanguageModel>
   auto internal_ids(Serializer<vector<long> >::deserialize(stream));
   auto external_ids(Serializer<vector<long> >::deserialize(stream));
   auto words(Serializer<vector<string> >::deserialize(stream));
-  return make_shared<SpaceSavingLanguageModel>(
+  return new SpaceSavingLanguageModel(
     subsample_threshold,
     num_counters,
     size,
@@ -456,14 +456,14 @@ void WordContextFactorization::serialize(ostream& stream) const {
   Serializer<AlignedVector>::serialize(_context_embeddings, stream);
 }
 
-shared_ptr<WordContextFactorization>
+WordContextFactorization*
     WordContextFactorization::deserialize(istream& stream) {
   auto vocab_dim(*Serializer<size_t>::deserialize(stream));
   auto embedding_dim(*Serializer<size_t>::deserialize(stream));
   auto actual_embedding_dim(*Serializer<size_t>::deserialize(stream));
   auto word_embeddings(Serializer<AlignedVector>::deserialize(stream));
   auto context_embeddings(Serializer<AlignedVector>::deserialize(stream));
-  return make_shared<WordContextFactorization>(
+  return new WordContextFactorization(
     vocab_dim,
     embedding_dim,
     actual_embedding_dim,
@@ -531,14 +531,14 @@ void SGD::serialize(ostream& stream) const {
   Serializer<vector<size_t> >::serialize(_t, stream);
 }
 
-shared_ptr<SGD> SGD::deserialize(istream& stream) {
+SGD* SGD::deserialize(istream& stream) {
   auto dimension(*Serializer<size_t>::deserialize(stream));
   auto tau(*Serializer<float>::deserialize(stream));
   auto kappa(*Serializer<float>::deserialize(stream));
   auto rho_lower_bound(*Serializer<float>::deserialize(stream));
   auto rho(Serializer<vector<float> >::deserialize(stream));
   auto t(Serializer<vector<size_t> >::deserialize(stream));
-  return make_shared<SGD>(
+  return new SGD(
     dimension,
     tau,
     kappa,
@@ -568,7 +568,7 @@ void SGD::_compute_rho(size_t dim) {
 //
 
 
-shared_ptr<SamplingStrategy> SamplingStrategy::deserialize(istream& stream) {
+SamplingStrategy* SamplingStrategy::deserialize(istream& stream) {
   auto derived(*Serializer<int>::deserialize(stream));
   switch (derived) {
     case uniform:
@@ -606,14 +606,14 @@ long UniformSamplingStrategy::sample_idx(const LanguageModel& language_model) {
 
 
 EmpiricalSamplingStrategy::EmpiricalSamplingStrategy(
-  shared_ptr<CountNormalizer> normalizer,
+  CountNormalizer* normalizer,
   size_t refresh_interval,
   size_t refresh_burn_in):
     SamplingStrategy(),
     _refresh_interval(refresh_interval),
     _refresh_burn_in(refresh_burn_in),
     _normalizer(normalizer),
-    _alias_sampler(make_shared<AliasSampler>(vector<float>())),
+    _alias_sampler(new AliasSampler(vector<float>())),
     _t(0),
     _initialized(false) {
 }
@@ -621,7 +621,7 @@ EmpiricalSamplingStrategy::EmpiricalSamplingStrategy(
 long EmpiricalSamplingStrategy::sample_idx(
     const LanguageModel& language_model) {
   if (! _initialized) {
-    _alias_sampler = make_shared<AliasSampler>(
+    _alias_sampler = new AliasSampler(
       _normalizer->normalize(language_model.counts())
     );
     _initialized = true;
@@ -635,7 +635,7 @@ void EmpiricalSamplingStrategy::step(
   if ((! _initialized) ||
       _t < _refresh_burn_in ||
       (_t - _refresh_burn_in) % _refresh_interval == 0) {
-    _alias_sampler = make_shared<AliasSampler>(
+    _alias_sampler = new AliasSampler(
       _normalizer->normalize(language_model.counts())
     );
     _initialized = true;
@@ -644,7 +644,7 @@ void EmpiricalSamplingStrategy::step(
 
 void EmpiricalSamplingStrategy::reset(const LanguageModel& language_model,
                                       const CountNormalizer& normalizer) {
-  _alias_sampler = make_shared<AliasSampler>(
+  _alias_sampler = new AliasSampler(
     normalizer.normalize(language_model.counts())
   );
   _initialized = true;
@@ -660,7 +660,7 @@ void EmpiricalSamplingStrategy::serialize(ostream& stream) const {
   Serializer<bool>::serialize(_initialized, stream);
 }
 
-shared_ptr<EmpiricalSamplingStrategy>
+EmpiricalSamplingStrategy*
     EmpiricalSamplingStrategy::deserialize(istream& stream) {
   auto refresh_interval(*Serializer<size_t>::deserialize(stream));
   auto refresh_burn_in(*Serializer<size_t>::deserialize(stream));
@@ -668,7 +668,7 @@ shared_ptr<EmpiricalSamplingStrategy>
   auto alias_sampler(Serializer<AliasSampler>::deserialize(stream));
   auto t(*Serializer<size_t>::deserialize(stream));
   auto initialized(*Serializer<bool>::deserialize(stream));
-  return make_shared<EmpiricalSamplingStrategy>(
+  return new EmpiricalSamplingStrategy(
     refresh_interval,
     refresh_burn_in,
     normalizer,
@@ -736,10 +736,10 @@ void ReservoirSamplingStrategy::serialize(ostream& stream) const {
   Serializer<ReservoirSampler<long> >::serialize(*_reservoir_sampler, stream);
 }
 
-shared_ptr<ReservoirSamplingStrategy>
+ReservoirSamplingStrategy*
     ReservoirSamplingStrategy::deserialize(istream& stream) {
   auto reservoir_sampler(Serializer<ReservoirSampler<long> >::deserialize(stream));
-  return make_shared<ReservoirSamplingStrategy>(reservoir_sampler);
+  return new ReservoirSamplingStrategy(reservoir_sampler);
 }
 
 bool ReservoirSamplingStrategy::equals(const SamplingStrategy& other) const {
@@ -754,7 +754,7 @@ bool ReservoirSamplingStrategy::equals(const SamplingStrategy& other) const {
 //
 
 
-shared_ptr<ContextStrategy> ContextStrategy::deserialize(istream& stream) {
+ContextStrategy* ContextStrategy::deserialize(istream& stream) {
   auto derived(*Serializer<int>::deserialize(stream));
   switch (derived) {
     case static_ctx:
@@ -785,10 +785,10 @@ void StaticContextStrategy::serialize(ostream& stream) const {
   Serializer<size_t>::serialize(_symm_context, stream);
 }
 
-shared_ptr<StaticContextStrategy>
+StaticContextStrategy*
     StaticContextStrategy::deserialize(istream& stream) {
   auto symm_context(*Serializer<size_t>::deserialize(stream));
-  return make_shared<StaticContextStrategy>(symm_context);
+  return new StaticContextStrategy(symm_context);
 }
 
 bool StaticContextStrategy::equals(const ContextStrategy& other) const {
@@ -816,10 +816,10 @@ void DynamicContextStrategy::serialize(ostream& stream) const {
   Serializer<size_t>::serialize(_symm_context, stream);
 }
 
-shared_ptr<DynamicContextStrategy>
+DynamicContextStrategy*
     DynamicContextStrategy::deserialize(istream& stream) {
   auto symm_context(*Serializer<size_t>::deserialize(stream));
-  return make_shared<DynamicContextStrategy>(symm_context);
+  return new DynamicContextStrategy(symm_context);
 }
 
 bool DynamicContextStrategy::equals(const ContextStrategy& other) const {

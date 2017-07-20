@@ -56,7 +56,7 @@ class AlignedVector {
 
     bool equals(const AlignedVector& other) const;
     void serialize(std::ostream& stream) const;
-    static std::shared_ptr<AlignedVector> deserialize(std::istream& stream);
+    static AlignedVector* deserialize(std::istream& stream);
 };
 
 bool operator==(const AlignedVector& lhs, const AlignedVector& rhs);
@@ -131,7 +131,7 @@ class CountNormalizer {
 
     virtual bool equals(const CountNormalizer& other) const;
     virtual void serialize(std::ostream& stream) const;
-    static std::shared_ptr<CountNormalizer> deserialize(std::istream& stream);
+    static CountNormalizer* deserialize(std::istream& stream);
 
   private:
     CountNormalizer(const CountNormalizer& count_normalizer);
@@ -149,7 +149,7 @@ class NaiveSampler {
 
     virtual bool equals(const NaiveSampler& other) const;
     virtual void serialize(std::ostream& stream) const;
-    static std::shared_ptr<NaiveSampler> deserialize(std::istream& stream);
+    static NaiveSampler* deserialize(std::istream& stream);
 
     NaiveSampler(size_t size,
                  std::vector<float>&& probability_table):
@@ -174,7 +174,7 @@ class AliasSampler {
 
     virtual bool equals(const AliasSampler& other) const;
     virtual void serialize(std::ostream& stream) const;
-    static std::shared_ptr<AliasSampler> deserialize(std::istream& stream);
+    static AliasSampler* deserialize(std::istream& stream);
 
     AliasSampler(size_t size,
                  std::vector<size_t>&& alias_table,
@@ -214,7 +214,7 @@ class ReservoirSampler {
 
     virtual bool equals(const ReservoirSampler<T>& other) const;
     virtual void serialize(std::ostream& stream) const;
-    static std::shared_ptr<ReservoirSampler<T> >
+    static ReservoirSampler<T>*
       deserialize(std::istream& stream);
 
     ReservoirSampler(size_t size, size_t filled_size, size_t count,
@@ -247,7 +247,7 @@ class Discretization {
 
     virtual bool equals(const Discretization& other) const;
     virtual void serialize(std::ostream& stream) const;
-    static std::shared_ptr<Discretization> deserialize(std::istream& stream);
+    static Discretization* deserialize(std::istream& stream);
 
     Discretization(std::vector<long>&& samples):
       _samples(std::forward<std::vector<long> >(samples)) { }
@@ -309,12 +309,12 @@ void ReservoirSampler<T>::serialize(std::ostream& stream) const {
 }
 
 template <typename T>
-std::shared_ptr<ReservoirSampler<T> > ReservoirSampler<T>::deserialize(std::istream& stream) {
+ReservoirSampler<T>* ReservoirSampler<T>::deserialize(std::istream& stream) {
   auto size(*Serializer<size_t>::deserialize(stream));
   auto filled_size(*Serializer<size_t>::deserialize(stream));
   auto count(*Serializer<size_t>::deserialize(stream));
   auto reservoir(Serializer<std::vector<T> >::deserialize(stream));
-  return std::make_shared<ReservoirSampler<T> >(
+  return new ReservoirSampler<T>(
     size,
     filled_size,
     count,

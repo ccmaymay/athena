@@ -185,20 +185,20 @@ void SGNSTokenLearner::token_train(size_t target_word_idx,
 
 void SGNSTokenLearner::serialize(ostream& stream) const {
   Serializer<WordContextFactorization>::serialize(*factorization, stream);
-  Serializer<SamplingStrategy>::serialize(*neg_sampling_strategy, stream);
-  Serializer<LanguageModel>::serialize(*language_model, stream);
+  Serializer<ReservoirSamplingStrategy>::serialize(*neg_sampling_strategy, stream);
+  Serializer<NaiveLanguageModel>::serialize(*language_model, stream);
   Serializer<SGD>::serialize(*sgd, stream);
 }
 
-shared_ptr<SGNSTokenLearner> SGNSTokenLearner::deserialize(istream& stream) {
+SGNSTokenLearner* SGNSTokenLearner::deserialize(istream& stream) {
   auto factorization_(
       Serializer<WordContextFactorization>::deserialize(stream));
   auto neg_sampling_strategy_(
-      Serializer<SamplingStrategy>::deserialize(stream));
+      Serializer<ReservoirSamplingStrategy>::deserialize(stream));
   auto language_model_(
-      Serializer<LanguageModel>::deserialize(stream));
+      Serializer<NaiveLanguageModel>::deserialize(stream));
   auto sgd_(Serializer<SGD>::deserialize(stream));
-  return make_shared<SGNSTokenLearner>(
+  return new SGNSTokenLearner(
     factorization_,
     neg_sampling_strategy_,
     language_model_,
@@ -287,12 +287,12 @@ void SGNSSentenceLearner::serialize(ostream& stream) const {
   Serializer<bool>::serialize(_propagate_retained, stream);
 }
 
-shared_ptr<SGNSSentenceLearner> SGNSSentenceLearner::deserialize(istream& stream) {
+SGNSSentenceLearner* SGNSSentenceLearner::deserialize(istream& stream) {
   auto token_learner_(Serializer<SGNSTokenLearner>::deserialize(stream));
   auto ctx_strategy_(Serializer<ContextStrategy>::deserialize(stream));
   auto neg_samples(*Serializer<size_t>::deserialize(stream));
   auto propagate_retained(*Serializer<bool>::deserialize(stream));
-  return make_shared<SGNSSentenceLearner>(
+  return new SGNSSentenceLearner(
     token_learner_,
     ctx_strategy_,
     neg_samples,
@@ -334,11 +334,11 @@ void SubsamplingSGNSSentenceLearner::serialize(ostream& stream) const {
   Serializer<bool>::serialize(_propagate_discarded, stream);
 }
 
-shared_ptr<SubsamplingSGNSSentenceLearner>
+SubsamplingSGNSSentenceLearner*
     SubsamplingSGNSSentenceLearner::deserialize(istream& stream) {
   auto sentence_learner_(Serializer<SGNSSentenceLearner>::deserialize(stream));
   auto propagate_discarded(*Serializer<bool>::deserialize(stream));
-  return make_shared<SubsamplingSGNSSentenceLearner>(
+  return new SubsamplingSGNSSentenceLearner(
     sentence_learner_,
     propagate_discarded
   );

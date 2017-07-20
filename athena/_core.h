@@ -78,7 +78,7 @@ class LanguageModel {
 
     virtual bool equals(const LanguageModel& other) const;
     virtual void serialize(std::ostream& stream) const = 0;
-    static std::shared_ptr<LanguageModel> deserialize(std::istream& stream);
+    static LanguageModel* deserialize(std::istream& stream);
 
   protected:
     LanguageModel() { }
@@ -129,7 +129,7 @@ class NaiveLanguageModel : public LanguageModel {
 
     virtual bool equals(const LanguageModel& other) const;
     virtual void serialize(std::ostream& stream) const;
-    static std::shared_ptr<NaiveLanguageModel> deserialize(std::istream& stream);
+    static NaiveLanguageModel* deserialize(std::istream& stream);
 
     NaiveLanguageModel(float subsample_threshold,
                   size_t size,
@@ -197,7 +197,7 @@ class SpaceSavingLanguageModel : public LanguageModel {
 
     virtual bool equals(const LanguageModel& other) const;
     virtual void serialize(std::ostream& stream) const;
-    static std::shared_ptr<SpaceSavingLanguageModel> deserialize(std::istream& stream);
+    static SpaceSavingLanguageModel* deserialize(std::istream& stream);
 
     SpaceSavingLanguageModel(float subsample_threshold,
                              size_t num_counters,
@@ -247,7 +247,7 @@ class WordContextFactorization {
 
     virtual bool equals(const WordContextFactorization& other) const;
     virtual void serialize(std::ostream& stream) const;
-    static std::shared_ptr<WordContextFactorization>
+    static WordContextFactorization*
       deserialize(std::istream& stream);
 
     WordContextFactorization(size_t vocab_dim,
@@ -289,7 +289,7 @@ class SGD {
 
     virtual bool equals(const SGD& other) const;
     virtual void serialize(std::ostream& stream) const;
-    static std::shared_ptr<SGD> deserialize(std::istream& stream);
+    static SGD* deserialize(std::istream& stream);
 
     SGD(size_t dimension,
         float tau,
@@ -337,7 +337,7 @@ class SamplingStrategy {
 
     virtual bool equals(const SamplingStrategy& other) const { return true; }
     virtual void serialize(std::ostream& stream) const = 0;
-    static std::shared_ptr<SamplingStrategy> deserialize(std::istream& stream);
+    static SamplingStrategy* deserialize(std::istream& stream);
 
   protected:
     SamplingStrategy() { }
@@ -356,9 +356,9 @@ class UniformSamplingStrategy : public SamplingStrategy {
     virtual long sample_idx(const LanguageModel& language_model);
 
     virtual void serialize(std::ostream& stream) const;
-    static std::shared_ptr<UniformSamplingStrategy>
+    static UniformSamplingStrategy*
       deserialize(std::istream& stream) {
-        return std::make_shared<UniformSamplingStrategy>();
+        return new UniformSamplingStrategy();
       }
 };
 
@@ -368,13 +368,13 @@ class UniformSamplingStrategy : public SamplingStrategy {
 class EmpiricalSamplingStrategy : public SamplingStrategy {
   size_t _refresh_interval;
   size_t _refresh_burn_in;
-  std::shared_ptr<CountNormalizer> _normalizer;
-  std::shared_ptr<AliasSampler> _alias_sampler;
+  CountNormalizer* _normalizer;
+  AliasSampler* _alias_sampler;
   size_t _t;
   bool _initialized;
 
   public:
-    EmpiricalSamplingStrategy(std::shared_ptr<CountNormalizer> normalizer,
+    EmpiricalSamplingStrategy(CountNormalizer* normalizer,
                               size_t
                                 refresh_interval = DEFAULT_REFRESH_INTERVAL,
                               size_t
@@ -397,13 +397,13 @@ class EmpiricalSamplingStrategy : public SamplingStrategy {
 
     virtual bool equals(const SamplingStrategy& other) const;
     virtual void serialize(std::ostream& stream) const;
-    static std::shared_ptr<EmpiricalSamplingStrategy>
+    static EmpiricalSamplingStrategy*
       deserialize(std::istream& stream);
 
     EmpiricalSamplingStrategy(size_t refresh_interval,
                               size_t refresh_burn_in,
-                              std::shared_ptr<CountNormalizer> normalizer,
-                              std::shared_ptr<AliasSampler> alias_sampler,
+                              CountNormalizer* normalizer,
+                              AliasSampler* alias_sampler,
                               size_t t,
                               bool initialized):
         _refresh_interval(refresh_interval),
@@ -418,11 +418,11 @@ class EmpiricalSamplingStrategy : public SamplingStrategy {
 // Reservoir sampling strategy for language model.
 
 class ReservoirSamplingStrategy : public SamplingStrategy {
-  std::shared_ptr<ReservoirSampler<long> > _reservoir_sampler;
+  ReservoirSampler<long>* _reservoir_sampler;
 
   public:
     ReservoirSamplingStrategy(
-      std::shared_ptr<ReservoirSampler<long> > reservoir_sampler):
+      ReservoirSampler<long>* reservoir_sampler):
         _reservoir_sampler(reservoir_sampler) { }
     // (randomly) add word to reservoir
     virtual void
@@ -439,7 +439,7 @@ class ReservoirSamplingStrategy : public SamplingStrategy {
     virtual ~ReservoirSamplingStrategy() { }
     virtual bool equals(const SamplingStrategy& other) const;
     virtual void serialize(std::ostream& stream) const;
-    static std::shared_ptr<ReservoirSamplingStrategy>
+    static ReservoirSamplingStrategy*
       deserialize(std::istream& stream);
 };
 
@@ -463,7 +463,7 @@ class ContextStrategy {
 
     virtual bool equals(const ContextStrategy& other) const { return true; }
     virtual void serialize(std::ostream& stream) const = 0;
-    static std::shared_ptr<ContextStrategy> deserialize(std::istream& stream);
+    static ContextStrategy* deserialize(std::istream& stream);
 
   protected:
     ContextStrategy() { }
@@ -486,7 +486,7 @@ class StaticContextStrategy : public ContextStrategy {
                                           size_t avail_right) const;
     virtual bool equals(const ContextStrategy& other) const;
     virtual void serialize(std::ostream& stream) const;
-    static std::shared_ptr<StaticContextStrategy>
+    static StaticContextStrategy*
       deserialize(std::istream& stream);
 };
 
@@ -504,7 +504,7 @@ class DynamicContextStrategy : public ContextStrategy {
                                           size_t avail_right) const;
     virtual bool equals(const ContextStrategy& other) const;
     virtual void serialize(std::ostream& stream) const;
-    static std::shared_ptr<DynamicContextStrategy>
+    static DynamicContextStrategy*
       deserialize(std::istream& stream);
 };
 
@@ -517,12 +517,12 @@ class LanguageModelExampleStore;
 
 template <typename T>
 class LanguageModelExampleStore {
-  std::shared_ptr<LanguageModel> _language_model;
+  LanguageModel* _language_model;
   size_t _num_examples_per_word;
   std::vector<ReservoirSampler<T> > _examples;
 
   public:
-    LanguageModelExampleStore(std::shared_ptr<LanguageModel> language_model,
+    LanguageModelExampleStore(LanguageModel* language_model,
                               size_t num_examples_per_word):
         _language_model(language_model),
         _num_examples_per_word(num_examples_per_word),
@@ -539,10 +539,10 @@ class LanguageModelExampleStore {
 
     virtual bool equals(const LanguageModelExampleStore<T>& other) const;
     virtual void serialize(std::ostream& stream) const;
-    static std::shared_ptr<LanguageModelExampleStore<T> >
+    static LanguageModelExampleStore<T>*
       deserialize(std::istream& stream);
 
-    LanguageModelExampleStore(std::shared_ptr<LanguageModel> language_model,
+    LanguageModelExampleStore(LanguageModel* language_model,
                               size_t num_examples_per_word,
                               std::vector<ReservoirSampler<T> >&& examples):
       _language_model(language_model),
@@ -599,12 +599,12 @@ void LanguageModelExampleStore<T>::serialize(std::ostream& stream) const {
 }
 
 template <typename T>
-std::shared_ptr<LanguageModelExampleStore<T> >
+LanguageModelExampleStore<T>*
     LanguageModelExampleStore<T>::deserialize(std::istream& stream) {
   auto language_model(Serializer<LanguageModel>::deserialize(stream));
   auto num_examples_per_word(*Serializer<size_t>::deserialize(stream));
   auto examples(Serializer<std::vector<ReservoirSampler<T> > >::deserialize(stream));
-  return std::make_shared<LanguageModelExampleStore<T> >(
+  return new LanguageModelExampleStore<T>(
     language_model,
     num_examples_per_word,
     std::move(*examples)

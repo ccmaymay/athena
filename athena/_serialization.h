@@ -23,12 +23,12 @@
       stream << std::setprecision(SERIALIZATION_PRECISION) << \
         value << "\r\n"; \
     } \
-    static std::shared_ptr<T> deserialize(std::istream& stream) { \
+    static T* deserialize(std::istream& stream) { \
       T value; \
       stream >> value; \
       stream.get(); \
       stream.get(); \
-      return std::make_shared<T>(value); \
+      return new T(value); \
     } \
   };
 
@@ -59,7 +59,7 @@ struct Serializer {
   static void serialize(const T& value, std::ostream& stream) {
     value.serialize(stream);
   }
-  static std::shared_ptr<T> deserialize(std::istream& stream) {
+  static T* deserialize(std::istream& stream) {
     return T::deserialize(stream);
   }
 };
@@ -89,10 +89,10 @@ struct Serializer<std::pair<K,V> > {
     Serializer<K>::serialize(container.first, stream);
     Serializer<V>::serialize(container.second, stream);
   }
-  static std::shared_ptr<std::pair<K,V> > deserialize(std::istream& stream) {
+  static std::pair<K,V>* deserialize(std::istream& stream) {
     auto first(*Serializer<K>::deserialize(stream));
     auto second(*Serializer<V>::deserialize(stream));
-    return std::make_shared<std::pair<K,V> >(first, second);
+    return new std::pair<K,V>(first, second);
   }
 };
 
@@ -109,9 +109,9 @@ struct Serializer<std::string> {
       stream << container[i];
     }
   }
-  static std::shared_ptr<std::string> deserialize(std::istream& stream) {
+  static std::string* deserialize(std::istream& stream) {
     auto size(*Serializer<size_t>::deserialize(stream));
-    auto container(std::make_shared<std::string>(size, 0));
+    auto container(new std::string(size, 0));
     for (size_t i = 0; i < size; ++i) {
       stream >> (*container)[i];
     }
@@ -134,9 +134,9 @@ struct Serializer<std::unordered_map<K,V> > {
       Serializer<std::pair<K,V> >::serialize(*it, stream);
     }
   }
-  static std::shared_ptr<std::unordered_map<K,V> > deserialize(std::istream& stream) {
+  static std::unordered_map<K,V>* deserialize(std::istream& stream) {
     auto size(*Serializer<size_t>::deserialize(stream));
-    auto container(std::make_shared<std::unordered_map<K,V> >());
+    auto container(new std::unordered_map<K,V>());
     for (size_t i = 0; i < size; ++i) {
       container->insert(
         std::move(*Serializer<std::pair<K,V> >::deserialize(stream)));
@@ -160,9 +160,9 @@ struct Serializer<std::multimap<K,V> > {
       Serializer<std::pair<K,V> >::serialize(*it, stream);
     }
   }
-  static std::shared_ptr<std::multimap<K,V> > deserialize(std::istream& stream) {
+  static std::multimap<K,V>* deserialize(std::istream& stream) {
     auto size(*Serializer<size_t>::deserialize(stream));
-    auto container(std::make_shared<std::multimap<K,V> >());
+    auto container(new std::multimap<K,V>());
     for (size_t i = 0; i < size; ++i) {
       container->insert(
         std::move(*Serializer<std::pair<K,V> >::deserialize(stream)));
@@ -186,9 +186,9 @@ struct Serializer<std::vector<T> > {
       Serializer<T>::serialize(*it, stream);
     }
   }
-  static std::shared_ptr<std::vector<T> > deserialize(std::istream& stream) {
+  static std::vector<T>* deserialize(std::istream& stream) {
     auto size(*Serializer<size_t>::deserialize(stream));
-    auto container(std::make_shared<std::vector<T> >());
+    auto container(new std::vector<T>());
     container->reserve(size);
     for (size_t i = 0; i < size; ++i) {
       container->push_back(std::move(*Serializer<T>::deserialize(stream)));
@@ -223,7 +223,7 @@ class FileSerializer {
       }
     }
 
-    std::shared_ptr<T> load() const {
+    T* load() const {
       std::ifstream input_file;
       input_file.open(_path.c_str());
       if (input_file) {
