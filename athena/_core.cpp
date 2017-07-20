@@ -7,38 +7,11 @@
 #include <fstream>
 #include <iostream>
 #include <cmath>
-#include <algorithm>
 #include <vector>
-#include <random>
-#include <utility>
 #include <exception>
 
 
 using namespace std;
-
-
-//
-// LanguageModel
-//
-
-
-LanguageModel* LanguageModel::deserialize(istream& stream) {
-  auto derived(*Serializer<int>::deserialize(stream));
-  switch (derived) {
-    case naive_lm:
-      return NaiveLanguageModel::deserialize(stream);
-    case space_saving_lm:
-      return SpaceSavingLanguageModel::deserialize(stream);
-    default:
-      throw runtime_error(
-        string("LanguageModel::deserialize: invalid derived type ") +
-        to_string(derived));
-  }
-}
-
-bool LanguageModel::equals(const LanguageModel& other) const {
-  return true;
-}
 
 
 //
@@ -47,7 +20,6 @@ bool LanguageModel::equals(const LanguageModel& other) const {
 
 
 NaiveLanguageModel::NaiveLanguageModel(float subsample_threshold):
-    LanguageModel(),
     _subsample_threshold(subsample_threshold),
     _size(0),
     _total(0),
@@ -145,6 +117,7 @@ void NaiveLanguageModel::sort() {
   truncate(_size);
 }
 
+/*
 void NaiveLanguageModel::serialize(ostream& stream) const {
   Serializer<int>::serialize(naive_lm, stream);
   Serializer<float>::serialize(_subsample_threshold, stream);
@@ -183,6 +156,7 @@ bool NaiveLanguageModel::equals(const LanguageModel& other) const {
     _word_ids == cast_other._word_ids &&
     _words == cast_other._words;
 }
+*/
 
 
 //
@@ -192,7 +166,6 @@ bool NaiveLanguageModel::equals(const LanguageModel& other) const {
 
 SpaceSavingLanguageModel::SpaceSavingLanguageModel(size_t num_counters,
                                                    float subsample_threshold):
-    LanguageModel(),
     _subsample_threshold(subsample_threshold),
     _num_counters(num_counters),
     _size(0),
@@ -276,6 +249,7 @@ void SpaceSavingLanguageModel::truncate(size_t max_size) {
     string("SpaceSavingLanguageModel::truncate: not implemented"));
 }
 
+/*
 void SpaceSavingLanguageModel::serialize(ostream& stream) const {
   Serializer<int>::serialize(space_saving_lm, stream);
   Serializer<float>::serialize(_subsample_threshold, stream);
@@ -331,6 +305,7 @@ bool SpaceSavingLanguageModel::equals(const LanguageModel& other) const {
     _external_ids == cast_other._external_ids &&
     _words == cast_other._words;
 }
+*/
 
 void SpaceSavingLanguageModel::_update_min_idx() {
   if (_min_idx + 1 == _size) {
@@ -432,11 +407,11 @@ WordContextFactorization::WordContextFactorization(size_t vocab_dim,
   }
 }
 
-size_t WordContextFactorization::get_embedding_dim() {
+size_t WordContextFactorization::get_embedding_dim() const {
   return _embedding_dim;
 }
 
-size_t WordContextFactorization::get_vocab_dim() {
+size_t WordContextFactorization::get_vocab_dim() const {
   return _vocab_dim;
 }
 
@@ -448,6 +423,7 @@ float* WordContextFactorization::get_context_embedding(size_t word_idx) {
   return _context_embeddings.data() + word_idx * _actual_embedding_dim;
 }
 
+/*
 void WordContextFactorization::serialize(ostream& stream) const {
   Serializer<size_t>::serialize(_vocab_dim, stream);
   Serializer<size_t>::serialize(_embedding_dim, stream);
@@ -481,6 +457,7 @@ bool WordContextFactorization::equals(const WordContextFactorization& other) con
     near(_context_embeddings, other._context_embeddings);
 }
 
+*/
 
 //
 // SGD
@@ -522,6 +499,7 @@ void SGD::reset(size_t dim) {
   _compute_rho(dim);
 }
 
+/*
 void SGD::serialize(ostream& stream) const {
   Serializer<size_t>::serialize(_dimension, stream);
   Serializer<float>::serialize(_tau, stream);
@@ -557,195 +535,10 @@ bool SGD::equals(const SGD& other) const {
     near(_rho, other._rho) &&
     _t == other._t;
 }
+*/
 
 void SGD::_compute_rho(size_t dim) {
   _rho[dim] = max(_rho_lower_bound, _kappa * (1.f - (float) _t[dim] / _tau));
-}
-
-
-//
-// SamplingStrategy
-//
-
-
-SamplingStrategy* SamplingStrategy::deserialize(istream& stream) {
-  auto derived(*Serializer<int>::deserialize(stream));
-  switch (derived) {
-    case uniform:
-      return UniformSamplingStrategy::deserialize(stream);
-    case empirical:
-      return EmpiricalSamplingStrategy::deserialize(stream);
-    case reservoir:
-      return ReservoirSamplingStrategy::deserialize(stream);
-    default:
-      throw runtime_error(
-        string("SamplingStrategy::deserialize: invalid derived type ") +
-        to_string(derived));
-  }
-}
-
-
-//
-// UniformSamplingStrategy
-//
-
-
-void UniformSamplingStrategy::serialize(ostream& stream) const {
-  Serializer<int>::serialize(uniform, stream);
-}
-
-long UniformSamplingStrategy::sample_idx(const LanguageModel& language_model) {
-  uniform_int_distribution<long> d(0, language_model.size() - 1);
-  return d(get_urng());
-}
-
-
-//
-// EmpiricalSamplingStrategy
-//
-
-
-EmpiricalSamplingStrategy::EmpiricalSamplingStrategy(
-  CountNormalizer* normalizer,
-  size_t refresh_interval,
-  size_t refresh_burn_in):
-    SamplingStrategy(),
-    _refresh_interval(refresh_interval),
-    _refresh_burn_in(refresh_burn_in),
-    _normalizer(normalizer),
-    _alias_sampler(new AliasSampler(vector<float>())),
-    _t(0),
-    _initialized(false) {
-}
-
-long EmpiricalSamplingStrategy::sample_idx(
-    const LanguageModel& language_model) {
-  if (! _initialized) {
-    _alias_sampler = new AliasSampler(
-      _normalizer->normalize(language_model.counts())
-    );
-    _initialized = true;
-  }
-  return _alias_sampler->sample();
-}
-
-void EmpiricalSamplingStrategy::step(
-    const LanguageModel& language_model, size_t word_idx) {
-  ++_t;
-  if ((! _initialized) ||
-      _t < _refresh_burn_in ||
-      (_t - _refresh_burn_in) % _refresh_interval == 0) {
-    _alias_sampler = new AliasSampler(
-      _normalizer->normalize(language_model.counts())
-    );
-    _initialized = true;
-  }
-}
-
-void EmpiricalSamplingStrategy::reset(const LanguageModel& language_model,
-                                      const CountNormalizer& normalizer) {
-  _alias_sampler = new AliasSampler(
-    normalizer.normalize(language_model.counts())
-  );
-  _initialized = true;
-}
-
-void EmpiricalSamplingStrategy::serialize(ostream& stream) const {
-  Serializer<int>::serialize(empirical, stream);
-  Serializer<size_t>::serialize(_refresh_interval, stream);
-  Serializer<size_t>::serialize(_refresh_burn_in, stream);
-  Serializer<CountNormalizer>::serialize(*_normalizer, stream);
-  Serializer<AliasSampler>::serialize(*_alias_sampler, stream);
-  Serializer<size_t>::serialize(_t, stream);
-  Serializer<bool>::serialize(_initialized, stream);
-}
-
-EmpiricalSamplingStrategy*
-    EmpiricalSamplingStrategy::deserialize(istream& stream) {
-  auto refresh_interval(*Serializer<size_t>::deserialize(stream));
-  auto refresh_burn_in(*Serializer<size_t>::deserialize(stream));
-  auto normalizer(Serializer<CountNormalizer>::deserialize(stream));
-  auto alias_sampler(Serializer<AliasSampler>::deserialize(stream));
-  auto t(*Serializer<size_t>::deserialize(stream));
-  auto initialized(*Serializer<bool>::deserialize(stream));
-  return new EmpiricalSamplingStrategy(
-    refresh_interval,
-    refresh_burn_in,
-    normalizer,
-    alias_sampler,
-    t,
-    initialized
-  );
-}
-
-bool EmpiricalSamplingStrategy::equals(const SamplingStrategy& other) const {
-  const auto& cast_other(
-      dynamic_cast<const EmpiricalSamplingStrategy&>(other));
-  return
-    _refresh_interval == cast_other._refresh_interval &&
-    _refresh_burn_in == cast_other._refresh_burn_in &&
-    _normalizer->equals(*(cast_other._normalizer)) &&
-    _alias_sampler->equals(*(cast_other._alias_sampler)) &&
-    _t == cast_other._t &&
-    _initialized == cast_other._initialized;
-}
-
-
-//
-// ReservoirSamplingStrategy
-//
-
-
-void ReservoirSamplingStrategy::reset(const LanguageModel& language_model,
-                                      const CountNormalizer& normalizer) {
-  // we use a deterministic scheme rather than sampling for the sake
-  // of speed (in the case where the reservoir sampler is large and
-  // the vocabulary is small)
-  vector<float> weights(normalizer.normalize(language_model.counts()));
-  _reservoir_sampler->clear();
-
-  // first insert elements into reservoir proportional to their
-  // probability, rounding down; as we do so write the remaining
-  // fractional insertion counts back to `weights`
-  size_t num_inserted = 0;
-  for (size_t word_idx = 0; word_idx < weights.size(); ++word_idx) {
-    const float weight(weights[word_idx] * _reservoir_sampler->size());
-    for (size_t i = 1; i <= weight; ++i) {
-      step(language_model, word_idx);
-      ++num_inserted;
-    }
-    weights[word_idx] = weight - (long) weight;
-  }
-
-  // now sort words by their remaining fractional counts
-  vector<pair<size_t,float> > sorted_words(weights.size());
-  for (size_t i = 0; i < weights.size(); ++i) {
-    sorted_words[i] = make_pair(i, weights[i]);
-  }
-  ::sort(sorted_words.rbegin(), sorted_words.rend(),
-         pair_second_cmp<size_t,float>);
-
-  // finally fill reservoir according to those fractional counts
-  for (size_t i = 0; num_inserted + i < _reservoir_sampler->size(); ++i) {
-    step(language_model, sorted_words[i % sorted_words.size()].first);
-  }
-}
-
-void ReservoirSamplingStrategy::serialize(ostream& stream) const {
-  Serializer<int>::serialize(reservoir, stream);
-  Serializer<ReservoirSampler<long> >::serialize(*_reservoir_sampler, stream);
-}
-
-ReservoirSamplingStrategy*
-    ReservoirSamplingStrategy::deserialize(istream& stream) {
-  auto reservoir_sampler(Serializer<ReservoirSampler<long> >::deserialize(stream));
-  return new ReservoirSamplingStrategy(reservoir_sampler);
-}
-
-bool ReservoirSamplingStrategy::equals(const SamplingStrategy& other) const {
-  const auto& cast_other(
-      dynamic_cast<const ReservoirSamplingStrategy&>(other));
-  return _reservoir_sampler->equals(*(cast_other._reservoir_sampler));
 }
 
 
@@ -754,6 +547,7 @@ bool ReservoirSamplingStrategy::equals(const SamplingStrategy& other) const {
 //
 
 
+/*
 ContextStrategy* ContextStrategy::deserialize(istream& stream) {
   auto derived(*Serializer<int>::deserialize(stream));
   switch (derived) {
@@ -767,6 +561,7 @@ ContextStrategy* ContextStrategy::deserialize(istream& stream) {
         to_string(derived));
   }
 }
+*/
 
 
 //
@@ -780,6 +575,7 @@ pair<size_t,size_t> StaticContextStrategy::size(size_t avail_left,
                    min(avail_right, _symm_context));
 }
 
+/*
 void StaticContextStrategy::serialize(ostream& stream) const {
   Serializer<int>::serialize(static_ctx, stream);
   Serializer<size_t>::serialize(_symm_context, stream);
@@ -796,6 +592,7 @@ bool StaticContextStrategy::equals(const ContextStrategy& other) const {
       dynamic_cast<const StaticContextStrategy&>(other));
   return _symm_context == cast_other._symm_context;
 }
+*/
 
 
 //
@@ -811,6 +608,7 @@ pair<size_t,size_t> DynamicContextStrategy::size(size_t avail_left,
                    min(avail_right, ctx_size));
 }
 
+/*
 void DynamicContextStrategy::serialize(ostream& stream) const {
   Serializer<int>::serialize(dynamic_ctx, stream);
   Serializer<size_t>::serialize(_symm_context, stream);
@@ -827,3 +625,4 @@ bool DynamicContextStrategy::equals(const ContextStrategy& other) const {
       dynamic_cast<const DynamicContextStrategy&>(other));
   return _symm_context == cast_other._symm_context;
 }
+*/

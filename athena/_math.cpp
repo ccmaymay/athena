@@ -65,6 +65,7 @@ AlignedVector::~AlignedVector() {
   }
 }
 
+/*
 bool operator==(const AlignedVector& lhs, const AlignedVector& rhs) {
   return lhs.equals(rhs);
 }
@@ -90,6 +91,7 @@ AlignedVector* AlignedVector::deserialize(istream& stream) {
               size * sizeof(float));
   return container;
 }
+*/
 
 
 //
@@ -211,6 +213,7 @@ vector<float> CountNormalizer::normalize(const vector<size_t>& counts) const {
   return probabilities;
 }
 
+/*
 void CountNormalizer::serialize(ostream& stream) const {
   Serializer<float>::serialize(_exponent, stream);
   Serializer<float>::serialize(_offset, stream);
@@ -227,6 +230,7 @@ bool CountNormalizer::equals(const CountNormalizer& other) const {
     near(_exponent, other._exponent) &&
     near(_offset, other._offset);
 }
+*/
 
 
 //
@@ -260,6 +264,7 @@ size_t NaiveSampler::sample() const {
   return high;
 }
 
+/*
 void NaiveSampler::serialize(ostream& stream) const {
   Serializer<size_t>::serialize(_size, stream);
   Serializer<vector<float> >::serialize(_probability_table, stream);
@@ -279,6 +284,7 @@ bool NaiveSampler::equals(const NaiveSampler& other) const {
     _size == other._size &&
     near(_probability_table, other._probability_table);
 }
+*/
 
 
 //
@@ -347,6 +353,7 @@ size_t AliasSampler::sample() const {
   }
 }
 
+/*
 void AliasSampler::serialize(ostream& stream) const {
   Serializer<size_t>::serialize(_size, stream);
   Serializer<vector<size_t> >::serialize(_alias_table, stream);
@@ -370,6 +377,7 @@ bool AliasSampler::equals(const AliasSampler& other) const {
     _alias_table == other._alias_table &&
     near(_probability_table, other._probability_table);
 }
+*/
 
 
 //
@@ -404,6 +412,7 @@ Discretization::Discretization(const vector<float>& probabilities,
   }
 }
 
+/*
 void Discretization::serialize(ostream& stream) const {
   Serializer<vector<long> >::serialize(_samples, stream);
 }
@@ -418,3 +427,4 @@ Discretization* Discretization::deserialize(istream& stream) {
 bool Discretization::equals(const Discretization& other) const {
   return _samples == other._samples;
 }
+*/

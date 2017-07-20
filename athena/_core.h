@@ -11,7 +11,9 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <random>
 #include <memory>
+#include <algorithm>
 
 #include "_math.h"
 
@@ -40,57 +42,9 @@ bool pair_second_cmp(std::pair<T,U> x, std::pair<T,U> y) {
 }
 
 
-// Language model abstract base class
-
-enum language_model_t {
-  naive_lm,
-  space_saving_lm
-};
-
-class LanguageModel {
-  public:
-    // return ejected (index, word) pair
-    // (index is -1 if nothing was ejected)
-    virtual std::pair<long,std::string> increment(const std::string& word) = 0;
-    // return index of word (-1 if does not exist)
-    virtual long lookup(const std::string& word) const = 0;
-    // return word at index (raise exception if does not exist)
-    virtual std::string reverse_lookup(long word_idx) const = 0;
-    // return count at word index
-    virtual size_t count(long word_idx) const = 0;
-    // return counts of all word indices
-    virtual std::vector<size_t> counts() const = 0;
-    // return ordered (descending) counts of all word indices
-    virtual std::vector<size_t> ordered_counts() const = 0;
-    // return number of word types present in language model
-    virtual size_t size() const = 0;
-    // return total number of word tokens seen by language model
-    virtual size_t total() const = 0;
-    // return true if word should be kept after subsampling
-    // (return true with probability
-    // sqrt(subsample_threshold / f(word_idx)) where f(word_idx) is the
-    // normalized frequency corresponding to word_idx)
-    virtual bool subsample(long word_idx) const = 0;
-    // truncate language model to top max_size types; do nothing if
-    // language model has at most max_size types already
-    virtual void truncate(size_t max_size) = 0;
-    virtual ~LanguageModel() { }
-
-    virtual bool equals(const LanguageModel& other) const;
-    virtual void serialize(std::ostream& stream) const = 0;
-    static LanguageModel* deserialize(std::istream& stream);
-
-  protected:
-    LanguageModel() { }
-
-  private:
-    LanguageModel(const LanguageModel& lm);
-};
-
-
 // Language model implemented naively
 
-class NaiveLanguageModel : public LanguageModel {
+class NaiveLanguageModel {
   float _subsample_threshold;
   size_t _size;
   size_t _total;
@@ -102,34 +56,36 @@ class NaiveLanguageModel : public LanguageModel {
     NaiveLanguageModel(float subsample_threshold = DEFAULT_SUBSAMPLE_THRESHOLD);
     // return ejected (index, word) pair
     // (index is -1 if nothing was ejected)
-    virtual std::pair<long,std::string> increment(const std::string& word);
+    std::pair<long,std::string> increment(const std::string& word);
     // return index of word (-1 if does not exist)
-    virtual long lookup(const std::string& word) const;
+    long lookup(const std::string& word) const;
     // return word at index (raise exception if does not exist)
-    virtual std::string reverse_lookup(long word_idx) const;
+    std::string reverse_lookup(long word_idx) const;
     // return count at word index
-    virtual size_t count(long word_idx) const;
+    size_t count(long word_idx) const;
     // return counts of all word indices
-    virtual std::vector<size_t> counts() const;
+    std::vector<size_t> counts() const;
     // return ordered (descending) counts of all word indices
-    virtual std::vector<size_t> ordered_counts() const;
+    std::vector<size_t> ordered_counts() const;
     // return number of word types present in language model
-    virtual size_t size() const;
+    size_t size() const;
     // return total number of word tokens seen by language model
-    virtual size_t total() const;
+    size_t total() const;
     // return true if word should be kept after subsampling
     // (return true with probability
     // sqrt(subsample_threshold / f(word_idx)) where f(word_idx) is the
     // normalized frequency corresponding to word_idx)
-    virtual bool subsample(long word_idx) const;
-    virtual void truncate(size_t max_size);
+    bool subsample(long word_idx) const;
+    void truncate(size_t max_size);
     // sort language model words by count (descending)
-    virtual void sort();
-    virtual ~NaiveLanguageModel() { }
+    void sort();
+    ~NaiveLanguageModel() { }
 
+    /*
     virtual bool equals(const LanguageModel& other) const;
     virtual void serialize(std::ostream& stream) const;
     static NaiveLanguageModel* deserialize(std::istream& stream);
+    */
 
     NaiveLanguageModel(float subsample_threshold,
                   size_t size,
@@ -144,6 +100,14 @@ class NaiveLanguageModel : public LanguageModel {
         _word_ids(
           std::forward<std::unordered_map<std::string,long> >(word_ids)),
         _words(std::forward<std::vector<std::string> >(words)) { }
+    NaiveLanguageModel(NaiveLanguageModel&& other):
+        _subsample_threshold(other._subsample_threshold),
+        _size(other._size),
+        _total(other._total),
+        _counters(std::move(other._counters)),
+        _word_ids(
+          std::move(other._word_ids)),
+        _words(std::move(other._words)) { }
 
   private:
     NaiveLanguageModel(const NaiveLanguageModel& lm);
@@ -152,7 +116,7 @@ class NaiveLanguageModel : public LanguageModel {
 
 // Language model implemented on SpaceSaving approximate counter.
 
-class SpaceSavingLanguageModel : public LanguageModel {
+class SpaceSavingLanguageModel {
   float _subsample_threshold;
   size_t _num_counters;
   size_t _size;
@@ -170,34 +134,36 @@ class SpaceSavingLanguageModel : public LanguageModel {
       float subsample_threshold = DEFAULT_SUBSAMPLE_THRESHOLD);
     // return ejected (index, word) pair
     // (index is -1 if nothing was ejected)
-    virtual std::pair<long,std::string> increment(const std::string& word);
+    std::pair<long,std::string> increment(const std::string& word);
     // return index of word (-1 if does not exist)
-    virtual long lookup(const std::string& word) const;
+    long lookup(const std::string& word) const;
     // return word at index (raise exception if does not exist)
-    virtual std::string reverse_lookup(long ext_word_idx) const;
+    std::string reverse_lookup(long ext_word_idx) const;
     // return count at word index
-    virtual size_t count(long ext_word_idx) const;
+    size_t count(long ext_word_idx) const;
     // return counts of all word indices
-    virtual std::vector<size_t> counts() const;
+    std::vector<size_t> counts() const;
     // return ordered (descending) counts of all word indices
-    virtual std::vector<size_t> ordered_counts() const;
+    std::vector<size_t> ordered_counts() const;
     // return number of word types present in language model
-    virtual size_t size() const;
+    size_t size() const;
     // return number of word types possible language model
-    virtual size_t capacity() const;
+    size_t capacity() const;
     // return total number of word tokens seen by language model
-    virtual size_t total() const;
+    size_t total() const;
     // return true if word should be kept after subsampling
     // (return true with probability
     // sqrt(subsample_threshold / f(word_idx)) where f(word_idx) is the
     // normalized frequency corresponding to word_idx)
-    virtual bool subsample(long ext_word_idx) const;
-    virtual void truncate(size_t max_size);
-    virtual ~SpaceSavingLanguageModel() { }
+    bool subsample(long ext_word_idx) const;
+    void truncate(size_t max_size);
+    ~SpaceSavingLanguageModel() { }
 
+    /*
     virtual bool equals(const LanguageModel& other) const;
     virtual void serialize(std::ostream& stream) const;
     static SpaceSavingLanguageModel* deserialize(std::istream& stream);
+    */
 
     SpaceSavingLanguageModel(float subsample_threshold,
                              size_t num_counters,
@@ -220,6 +186,17 @@ class SpaceSavingLanguageModel : public LanguageModel {
         _internal_ids(std::forward<std::vector<long> >(internal_ids)),
         _external_ids(std::forward<std::vector<long> >(external_ids)),
         _words(std::forward<std::vector<std::string> >(words)) { }
+    SpaceSavingLanguageModel(SpaceSavingLanguageModel&& other):
+        _subsample_threshold(other._subsample_threshold),
+        _num_counters(other._num_counters),
+        _size(other._size),
+        _total(other._total),
+        _min_idx(other._min_idx),
+        _counters(std::move(other._counters)),
+        _word_ids(std::move(other._word_ids)),
+        _internal_ids(std::move(other._internal_ids)),
+        _external_ids(std::move(other._external_ids)),
+        _words(std::move(other._words)) { }
 
   private:
     void _update_min_idx();
@@ -239,16 +216,18 @@ class WordContextFactorization {
   public:
     WordContextFactorization(size_t vocab_dim = DEFAULT_VOCAB_DIM,
                              size_t embedding_dim = DEFAULT_EMBEDDING_DIM);
-    virtual size_t get_embedding_dim();
-    virtual size_t get_vocab_dim();
-    virtual float* get_word_embedding(size_t word_idx);
-    virtual float* get_context_embedding(size_t word_idx);
-    virtual ~WordContextFactorization() { }
+    size_t get_embedding_dim() const;
+    size_t get_vocab_dim() const;
+    float* get_word_embedding(size_t word_idx);
+    float* get_context_embedding(size_t word_idx);
+    ~WordContextFactorization() { }
 
+    /*
     virtual bool equals(const WordContextFactorization& other) const;
     virtual void serialize(std::ostream& stream) const;
     static WordContextFactorization*
       deserialize(std::istream& stream);
+      */
 
     WordContextFactorization(size_t vocab_dim,
                              size_t embedding_dim,
@@ -261,6 +240,13 @@ class WordContextFactorization {
         _word_embeddings(std::forward<AlignedVector>(word_embeddings)),
         _context_embeddings(
           std::forward<AlignedVector>(context_embeddings)) { }
+    WordContextFactorization(WordContextFactorization&& other):
+        _vocab_dim(other._vocab_dim),
+        _embedding_dim(other._embedding_dim),
+        _actual_embedding_dim(other._actual_embedding_dim),
+        _word_embeddings(std::move(other._word_embeddings)),
+        _context_embeddings(
+          std::move(other._context_embeddings)) { }
 
   private:
     WordContextFactorization(const WordContextFactorization& wcf);
@@ -278,18 +264,20 @@ class SGD {
   public:
     SGD(size_t dimension = 1, float tau = 0, float kappa = 0.6,
         float rho_lower_bound = 0);
-    virtual void step(size_t dim);
-    virtual float get_rho(size_t dim) const;
-    virtual void gradient_update(size_t dim, size_t n, const float *g,
+    void step(size_t dim);
+    float get_rho(size_t dim) const;
+    void gradient_update(size_t dim, size_t n, const float *g,
                                  float *x);
-    virtual void scaled_gradient_update(size_t dim, size_t n, const float *g,
+    void scaled_gradient_update(size_t dim, size_t n, const float *g,
                                         float *x, float alpha);
-    virtual void reset(size_t dim);
-    virtual ~SGD() { };
+    void reset(size_t dim);
+    ~SGD() { };
 
+    /*
     virtual bool equals(const SGD& other) const;
     virtual void serialize(std::ostream& stream) const;
     static SGD* deserialize(std::istream& stream);
+    */
 
     SGD(size_t dimension,
         float tau,
@@ -303,6 +291,13 @@ class SGD {
           _rho_lower_bound(rho_lower_bound),
           _rho(std::forward<std::vector<float> >(rho)),
           _t(std::forward<std::vector<size_t> >(t)) { }
+    SGD(SGD&& other):
+          _dimension(other._dimension),
+          _tau(other._tau),
+          _kappa(other._kappa),
+          _rho_lower_bound(other._rho_lower_bound),
+          _rho(std::move(other._rho)),
+          _t(std::move(other._t)) { }
 
   private:
     void _compute_rho(size_t dimension);
@@ -310,71 +305,54 @@ class SGD {
 };
 
 
-// Discrete sampling strategy for language model (abstract base class).
-
-enum sampling_strategy_t {
-  uniform,
-  empirical,
-  reservoir
-};
-
-class SamplingStrategy {
-  public:
-    // return
-    // word idx distributed according to implementation-defined
-    // distribution
-    virtual long
-      sample_idx(const LanguageModel& language_model) = 0;
-    // update internal state according to language model
-    // (this should be called incrementally as the language model
-    // is updated)
-    virtual void
-      step(const LanguageModel& language_model, size_t word_idx) { }
-    virtual void
-      reset(const LanguageModel& language_model,
-            const CountNormalizer& normalizer) { }
-    virtual ~SamplingStrategy() { }
-
-    virtual bool equals(const SamplingStrategy& other) const { return true; }
-    virtual void serialize(std::ostream& stream) const = 0;
-    static SamplingStrategy* deserialize(std::istream& stream);
-
-  protected:
-    SamplingStrategy() { }
-
-  private:
-    SamplingStrategy(const SamplingStrategy& sampling_strategy);
-};
-
-
 // Uniform sampling strategy for language model.
 
-class UniformSamplingStrategy : public SamplingStrategy {
-  public:
-    using SamplingStrategy::SamplingStrategy;
-    // sample from uniform distribution
-    virtual long sample_idx(const LanguageModel& language_model);
+template <class LanguageModel>
+class UniformSamplingStrategy;
 
+template <class LanguageModel>
+class UniformSamplingStrategy {
+  public:
+    UniformSamplingStrategy() { }
+    // sample from uniform distribution
+    long sample_idx(const LanguageModel& language_model);
+    void
+      step(const LanguageModel& language_model, size_t word_idx) { }
+    void
+      reset(const LanguageModel& language_model,
+            const CountNormalizer& normalizer) { }
+
+    UniformSamplingStrategy(UniformSamplingStrategy&& other) { }
+
+    /*
     virtual void serialize(std::ostream& stream) const;
     static UniformSamplingStrategy*
       deserialize(std::istream& stream) {
         return new UniformSamplingStrategy();
       }
+    */
+
+  private:
+    UniformSamplingStrategy(const UniformSamplingStrategy& other);
 };
 
 
 // Empirical sampling strategy for language model.
 
-class EmpiricalSamplingStrategy : public SamplingStrategy {
+template <class LanguageModel>
+class EmpiricalSamplingStrategy;
+
+template <class LanguageModel>
+class EmpiricalSamplingStrategy {
   size_t _refresh_interval;
   size_t _refresh_burn_in;
-  CountNormalizer* _normalizer;
+  CountNormalizer _normalizer;
   AliasSampler* _alias_sampler;
   size_t _t;
   bool _initialized;
 
   public:
-    EmpiricalSamplingStrategy(CountNormalizer* normalizer,
+    EmpiricalSamplingStrategy(CountNormalizer&& normalizer,
                               size_t
                                 refresh_interval = DEFAULT_REFRESH_INTERVAL,
                               size_t
@@ -383,64 +361,92 @@ class EmpiricalSamplingStrategy : public SamplingStrategy {
     // or the number of steps since then is a multiple of
     // refresh_interval, refresh (recompute) distribution
     // based on current counts
-    virtual void
+    void
       step(const LanguageModel& language_model, size_t word_idx);
     // reset distribution according to specified language model, using
     // specified count normalizer (ignore normalizer provided to ctor)
-    virtual void
+    void
       reset(const LanguageModel& language_model,
             const CountNormalizer& normalizer);
     // sample from (potentially stale) empirical distribution
     // computed by transforming counts via normalizer
-    virtual long sample_idx(const LanguageModel& language_model);
-    virtual ~EmpiricalSamplingStrategy() { }
+    long sample_idx(const LanguageModel& language_model);
+    ~EmpiricalSamplingStrategy() { }
 
+    /*
     virtual bool equals(const SamplingStrategy& other) const;
     virtual void serialize(std::ostream& stream) const;
     static EmpiricalSamplingStrategy*
       deserialize(std::istream& stream);
+      */
 
     EmpiricalSamplingStrategy(size_t refresh_interval,
                               size_t refresh_burn_in,
-                              CountNormalizer* normalizer,
+                              CountNormalizer&& normalizer,
                               AliasSampler* alias_sampler,
                               size_t t,
                               bool initialized):
         _refresh_interval(refresh_interval),
         _refresh_burn_in(refresh_burn_in),
-        _normalizer(normalizer),
+        _normalizer(std::move(normalizer)),
         _alias_sampler(alias_sampler),
         _t(t),
         _initialized(initialized) { }
+
+    EmpiricalSamplingStrategy(EmpiricalSamplingStrategy&& other):
+        _refresh_interval(other._refresh_interval),
+        _refresh_burn_in(other._refresh_burn_in),
+        _normalizer(std::move(other._normalizer)),
+        _alias_sampler(other._alias_sampler),
+        _t(other._t),
+        _initialized(other._initialized) {
+      other._initialized = false;
+      other._alias_sampler = new AliasSampler(std::vector<float>());
+    }
+
+  private:
+    EmpiricalSamplingStrategy(const EmpiricalSamplingStrategy& other);
 };
 
 
 // Reservoir sampling strategy for language model.
 
-class ReservoirSamplingStrategy : public SamplingStrategy {
-  ReservoirSampler<long>* _reservoir_sampler;
+template <class LanguageModel>
+class ReservoirSamplingStrategy;
+
+template <class LanguageModel>
+class ReservoirSamplingStrategy {
+  ReservoirSampler<long> _reservoir_sampler;
 
   public:
     ReservoirSamplingStrategy(
-      ReservoirSampler<long>* reservoir_sampler):
-        _reservoir_sampler(reservoir_sampler) { }
+      ReservoirSampler<long>&& reservoir_sampler):
+        _reservoir_sampler(std::move(reservoir_sampler)) { }
     // (randomly) add word to reservoir
-    virtual void
+    void
       step(const LanguageModel& language_model, size_t word_idx) {
-        _reservoir_sampler->insert(word_idx);
+        _reservoir_sampler.insert(word_idx);
       }
     // re-populate reservoir according to language model
-    virtual void
+    void
       reset(const LanguageModel& language_model,
             const CountNormalizer& normalizer);
-    virtual long sample_idx(const LanguageModel& language_model) {
-      return _reservoir_sampler->sample();
+    long sample_idx(const LanguageModel& language_model) {
+      return _reservoir_sampler.sample();
     }
-    virtual ~ReservoirSamplingStrategy() { }
+    ~ReservoirSamplingStrategy() { }
+    /*
     virtual bool equals(const SamplingStrategy& other) const;
     virtual void serialize(std::ostream& stream) const;
     static ReservoirSamplingStrategy*
       deserialize(std::istream& stream);
+      */
+
+    ReservoirSamplingStrategy(ReservoirSamplingStrategy&& other):
+      _reservoir_sampler(std::move(other._reservoir_sampler)) { }
+
+  private:
+    ReservoirSamplingStrategy(const ReservoirSamplingStrategy& other);
 };
 
 
@@ -461,9 +467,11 @@ class ContextStrategy {
                                           size_t avail_right) const = 0;
     virtual ~ContextStrategy() { }
 
+    /*
     virtual bool equals(const ContextStrategy& other) const { return true; }
     virtual void serialize(std::ostream& stream) const = 0;
     static ContextStrategy* deserialize(std::istream& stream);
+    */
 
   protected:
     ContextStrategy() { }
@@ -484,10 +492,12 @@ class StaticContextStrategy : public ContextStrategy {
     // return static (fixed) thresholded context
     virtual std::pair<size_t,size_t> size(size_t avail_left,
                                           size_t avail_right) const;
+                                          /*
     virtual bool equals(const ContextStrategy& other) const;
     virtual void serialize(std::ostream& stream) const;
     static StaticContextStrategy*
       deserialize(std::istream& stream);
+      */
 };
 
 
@@ -502,114 +512,192 @@ class DynamicContextStrategy : public ContextStrategy {
     // return dynamic (sampled) thresholded context
     virtual std::pair<size_t,size_t> size(size_t avail_left,
                                           size_t avail_right) const;
+                                          /*
     virtual bool equals(const ContextStrategy& other) const;
     virtual void serialize(std::ostream& stream) const;
     static DynamicContextStrategy*
       deserialize(std::istream& stream);
-};
-
-
-// Space-saving LM with reservoirs attached to words
-// (Idea: heavy-hitting word types and usage examples)
-
-template <typename T>
-class LanguageModelExampleStore;
-
-template <typename T>
-class LanguageModelExampleStore {
-  LanguageModel* _language_model;
-  size_t _num_examples_per_word;
-  std::vector<ReservoirSampler<T> > _examples;
-
-  public:
-    LanguageModelExampleStore(LanguageModel* language_model,
-                              size_t num_examples_per_word):
-        _language_model(language_model),
-        _num_examples_per_word(num_examples_per_word),
-        _examples() { }
-    virtual std::pair<long,std::string> increment(const std::string& word,
-                                                  const T& example);
-    virtual const LanguageModel& get_language_model() const {
-      return *_language_model;
-    }
-    virtual const ReservoirSampler<T>& get_examples(long idx) {
-      return _examples[idx];
-    }
-    virtual ~LanguageModelExampleStore() { }
-
-    virtual bool equals(const LanguageModelExampleStore<T>& other) const;
-    virtual void serialize(std::ostream& stream) const;
-    static LanguageModelExampleStore<T>*
-      deserialize(std::istream& stream);
-
-    LanguageModelExampleStore(LanguageModel* language_model,
-                              size_t num_examples_per_word,
-                              std::vector<ReservoirSampler<T> >&& examples):
-      _language_model(language_model),
-      _num_examples_per_word(num_examples_per_word),
-      _examples(std::forward<std::vector<ReservoirSampler<T> > >(examples)) { }
-
-  private:
-    LanguageModelExampleStore(const LanguageModelExampleStore<T>&
-                                lm_example_store);
+      */
 };
 
 
 //
-// LanguageModelExampleStore
+// UniformSamplingStrategy
 //
 
 
-template <typename T>
-std::pair<long,std::string> LanguageModelExampleStore<T>::increment(
-    const std::string& word, const T& example) {
-  // if ejection, clear corresponding reservoir
-  std::pair<long,std::string> ejectee(_language_model->increment(word));
-  if (ejectee.first >= 0 &&
-      static_cast<size_t>(ejectee.first) < _examples.size()) {
-    _examples[ejectee.first].clear();
+/*
+template <class LanguageModel>
+void UniformSamplingStrategy<LanguageModel>::serialize(ostream& stream) const {
+  Serializer<int>::serialize(uniform, stream);
+}
+*/
+
+template <class LanguageModel>
+long UniformSamplingStrategy<LanguageModel>::sample_idx(const LanguageModel& language_model) {
+  std::uniform_int_distribution<long> d(0, language_model.size() - 1);
+  return d(get_urng());
+}
+
+
+//
+// EmpiricalSamplingStrategy
+//
+
+
+template <class LanguageModel>
+EmpiricalSamplingStrategy<LanguageModel>::EmpiricalSamplingStrategy(
+  CountNormalizer&& normalizer,
+  size_t refresh_interval,
+  size_t refresh_burn_in):
+    _refresh_interval(refresh_interval),
+    _refresh_burn_in(refresh_burn_in),
+    _normalizer(std::move(normalizer)),
+    _alias_sampler(new AliasSampler(std::vector<float>())),
+    _t(0),
+    _initialized(false) {
+}
+
+template <class LanguageModel>
+long EmpiricalSamplingStrategy<LanguageModel>::sample_idx(
+    const LanguageModel& language_model) {
+  if (! _initialized) {
+    free(_alias_sampler);
+    _alias_sampler = new AliasSampler(
+      _normalizer.normalize(language_model.counts())
+    );
+    _initialized = true;
   }
+  return _alias_sampler->sample();
+}
 
-  // pad reservoir vector as needed and insert example
-  const long idx = _language_model->lookup(word);
-  if (idx >= 0) {
-    for (size_t i = _examples.size(); i <= static_cast<size_t>(idx); ++i) {
-      _examples.emplace_back(_num_examples_per_word);
-    }
-    _examples[idx].insert(example);
+template <class LanguageModel>
+void EmpiricalSamplingStrategy<LanguageModel>::step(
+    const LanguageModel& language_model, size_t word_idx) {
+  ++_t;
+  if ((! _initialized) ||
+      _t < _refresh_burn_in ||
+      (_t - _refresh_burn_in) % _refresh_interval == 0) {
+    free(_alias_sampler);
+    _alias_sampler = new AliasSampler(
+      _normalizer.normalize(language_model.counts())
+    );
+    _initialized = true;
   }
-
-  return ejectee;
 }
 
-template <typename T>
-bool LanguageModelExampleStore<T>::equals(
-    const LanguageModelExampleStore<T>& other) const {
-  return
-    _language_model->equals(*(other._language_model)) &&
-    _num_examples_per_word == other._num_examples_per_word &&
-    _examples == other._examples;
+template <class LanguageModel>
+void EmpiricalSamplingStrategy<LanguageModel>::reset(const LanguageModel& language_model,
+                                      const CountNormalizer& normalizer) {
+  free(_alias_sampler);
+  _alias_sampler = new AliasSampler(
+    normalizer.normalize(language_model.counts())
+  );
+  _initialized = true;
 }
 
-template <typename T>
-void LanguageModelExampleStore<T>::serialize(std::ostream& stream) const {
-  Serializer<LanguageModel>::serialize(*_language_model, stream);
-  Serializer<size_t>::serialize(_num_examples_per_word, stream);
-  Serializer<std::vector<ReservoirSampler<T> > >::serialize(_examples, stream);
+/*
+void EmpiricalSamplingStrategy::serialize(ostream& stream) const {
+  Serializer<int>::serialize(empirical, stream);
+  Serializer<size_t>::serialize(_refresh_interval, stream);
+  Serializer<size_t>::serialize(_refresh_burn_in, stream);
+  Serializer<CountNormalizer>::serialize(*_normalizer, stream);
+  Serializer<AliasSampler>::serialize(*_alias_sampler, stream);
+  Serializer<size_t>::serialize(_t, stream);
+  Serializer<bool>::serialize(_initialized, stream);
 }
 
-template <typename T>
-LanguageModelExampleStore<T>*
-    LanguageModelExampleStore<T>::deserialize(std::istream& stream) {
-  auto language_model(Serializer<LanguageModel>::deserialize(stream));
-  auto num_examples_per_word(*Serializer<size_t>::deserialize(stream));
-  auto examples(Serializer<std::vector<ReservoirSampler<T> > >::deserialize(stream));
-  return new LanguageModelExampleStore<T>(
-    language_model,
-    num_examples_per_word,
-    std::move(*examples)
+EmpiricalSamplingStrategy*
+    EmpiricalSamplingStrategy::deserialize(istream& stream) {
+  auto refresh_interval(*Serializer<size_t>::deserialize(stream));
+  auto refresh_burn_in(*Serializer<size_t>::deserialize(stream));
+  auto normalizer(Serializer<CountNormalizer>::deserialize(stream));
+  auto alias_sampler(Serializer<AliasSampler>::deserialize(stream));
+  auto t(*Serializer<size_t>::deserialize(stream));
+  auto initialized(*Serializer<bool>::deserialize(stream));
+  return new EmpiricalSamplingStrategy(
+    refresh_interval,
+    refresh_burn_in,
+    normalizer,
+    alias_sampler,
+    t,
+    initialized
   );
 }
+
+bool EmpiricalSamplingStrategy::equals(const SamplingStrategy& other) const {
+  const auto& cast_other(
+      dynamic_cast<const EmpiricalSamplingStrategy&>(other));
+  return
+    _refresh_interval == cast_other._refresh_interval &&
+    _refresh_burn_in == cast_other._refresh_burn_in &&
+    _normalizer->equals(*(cast_other._normalizer)) &&
+    _alias_sampler->equals(*(cast_other._alias_sampler)) &&
+    _t == cast_other._t &&
+    _initialized == cast_other._initialized;
+}
+*/
+
+
+//
+// ReservoirSamplingStrategy
+//
+
+
+template <class LanguageModel>
+void ReservoirSamplingStrategy<LanguageModel>::reset(const LanguageModel& language_model,
+                                      const CountNormalizer& normalizer) {
+  // we use a deterministic scheme rather than sampling for the sake
+  // of speed (in the case where the reservoir sampler is large and
+  // the vocabulary is small)
+  std::vector<float> weights(normalizer.normalize(language_model.counts()));
+  _reservoir_sampler.clear();
+
+  // first insert elements into reservoir proportional to their
+  // probability, rounding down; as we do so write the remaining
+  // fractional insertion counts back to `weights`
+  size_t num_inserted = 0;
+  for (size_t word_idx = 0; word_idx < weights.size(); ++word_idx) {
+    const float weight(weights[word_idx] * _reservoir_sampler.size());
+    for (size_t i = 1; i <= weight; ++i) {
+      step(language_model, word_idx);
+      ++num_inserted;
+    }
+    weights[word_idx] = weight - (long) weight;
+  }
+
+  // now sort words by their remaining fractional counts
+  std::vector<std::pair<size_t,float> > sorted_words(weights.size());
+  for (size_t i = 0; i < weights.size(); ++i) {
+    sorted_words[i] = std::make_pair(i, weights[i]);
+  }
+  std::sort(sorted_words.rbegin(), sorted_words.rend(),
+         pair_second_cmp<size_t,float>);
+
+  // finally fill reservoir according to those fractional counts
+  for (size_t i = 0; num_inserted + i < _reservoir_sampler.size(); ++i) {
+    step(language_model, sorted_words[i % sorted_words.size()].first);
+  }
+}
+
+/*
+void ReservoirSamplingStrategy::serialize(ostream& stream) const {
+  Serializer<int>::serialize(reservoir, stream);
+  Serializer<ReservoirSampler<long> >::serialize(*_reservoir_sampler, stream);
+}
+
+ReservoirSamplingStrategy*
+    ReservoirSamplingStrategy::deserialize(istream& stream) {
+  auto reservoir_sampler(Serializer<ReservoirSampler<long> >::deserialize(stream));
+  return new ReservoirSamplingStrategy(reservoir_sampler);
+}
+
+bool ReservoirSamplingStrategy::equals(const SamplingStrategy& other) const {
+  const auto& cast_other(
+      dynamic_cast<const ReservoirSamplingStrategy&>(other));
+  return _reservoir_sampler->equals(*(cast_other._reservoir_sampler));
+}
+*/
 
 
 #endif
