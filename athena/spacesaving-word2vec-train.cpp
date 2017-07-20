@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <vector>
 #include <string>
+#include <utility>
 #include <iostream>
 #include <fstream>
 #include <unistd.h>
@@ -17,15 +18,17 @@
 
 #define SENTENCE_LIMIT 1000
 #define RHO_LOWER_BOUND_FACTOR 1e-4
-#define PROPAGATE_DISCARDED false
-#define PROPAGATE_RETAINED true
-#define RESERVOIR_SIZE 100000000
+#define NEG_SAMPLING_TABLE_SIZE 100000000
 
 #define DEFAULT_SYMM_CONTEXT 5
 #define DEFAULT_NEG_SAMPLES 5
 #define DEFAULT_TAU 1.7e7
 #define DEFAULT_KAPPA 2.5e-2
 
+
+typedef ReservoirSamplingStrategy<SpaceSavingLanguageModel, ReservoirSampler<long> > NegSamplingStrategy;
+typedef SGNSTokenLearner<SpaceSavingLanguageModel, NegSamplingStrategy> SGNSTokenLearnerType;
+typedef SGNSSentenceLearner<SGNSTokenLearnerType, DynamicContextStrategy> SGNSSentenceLearnerType;
 
 using namespace std;
 
@@ -62,9 +65,6 @@ void usage(ostream& s, const string& program) {
   s << "  -k <kappa>\n";
   s << "     Set learning rate overall multiplier.\n";
   s << "     Default: " << DEFAULT_KAPPA << "\n";
-  s << "  -x <eos-symbol>\n";
-  s << "     Set explicit end-of-sentence symbol.\n";
-  s << "     Default: none (sentences delimited by newlines only)\n";
   s << "  -h\n";
   s << "     Print this help and exit.\n";
 }
@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
 
   int ret = 0;
   while (ret != -1) {
-    ret = getopt(argc, argv, "v:e:s:n:c:t:k:x:h");
+    ret = getopt(argc, argv, "v:e:s:n:c:t:k:h");
     switch (ret) {
       case 'v':
         vocab_dim = stoull(string(optarg));
@@ -131,67 +131,89 @@ int main(int argc, char **argv) {
   info(__func__, "seeding random number generator ...\n");
   seed_default();
 
-  info(__func__, "initializing model ...\n");
-  auto model(make_shared<SGNSModel>(
+  info(__func__, "initializing SGNS model ...\n");
+  auto sgd(make_shared<SGD>(
+    vocab_dim,
+    tau,
+    kappa,
+    RHO_LOWER_BOUND_FACTOR * kappa));
+  auto language_model(make_shared<SpaceSavingLanguageModel>(
+    vocab_dim, subsample_threshold));
+  auto neg_sampling_strategy(make_shared<NegSamplingStrategy>(
+    make_shared<ReservoirSampler<long> >(NEG_SAMPLING_TABLE_SIZE)));
+  auto token_learner(make_shared<SGNSTokenLearnerType>(
     make_shared<WordContextFactorization>(vocab_dim, embedding_dim),
-    make_shared<ReservoirSamplingStrategy>(
-      make_shared<ReservoirSampler<long> >(RESERVOIR_SIZE)),
-    make_shared<SpaceSavingLanguageModel>(vocab_dim, subsample_threshold),
-    make_shared<SGD>(vocab_dim, tau, kappa, RHO_LOWER_BOUND_FACTOR * kappa),
-    make_shared<DynamicContextStrategy>(symm_context),
-    make_shared<SGNSTokenLearner>(),
-    make_shared<SGNSSentenceLearner>(neg_samples, PROPAGATE_RETAINED),
-    make_shared<SubsamplingSGNSSentenceLearner>(PROPAGATE_DISCARDED)
+    neg_sampling_strategy,
+    language_model,
+    sgd
   ));
-  model->token_learner->set_model(model);
-  model->sentence_learner->set_model(model);
-  model->subsampling_sentence_learner->set_model(model);
+  SGNSSentenceLearnerType sentence_learner(
+    token_learner,
+    make_shared<DynamicContextStrategy>(symm_context),
+    neg_samples
+  );
 
   info(__func__, "training ...\n");
-  vector<string> sentence;
-  string word;
+  size_t words_seen = 0, prev_words_seen = 0;
   ifstream f;
   f.open(input_path);
   stream_ready_or_throw(f);
-  size_t words_seen = 0;
-  time_t start = time(NULL);
-  while (f) {
-    sentence.clear();
-    while (f) {
-      const char c = f.get();
-      if (c == '\r') {
-        continue;
+  SentenceReader reader(f, SENTENCE_LIMIT);
+  time_t start = time(NULL), prev_now = time(NULL);
+  while (reader.has_next()) {
+    vector<string> sentence(reader.next());
+
+    for (auto it = sentence.begin(); it != sentence.end(); ++it) {
+      const pair<long,string> ejectee = language_model->increment(*it);
+      const long ejectee_idx = ejectee.first;
+      if (ejectee_idx >= 0) {
+        token_learner->reset_word(ejectee_idx);
       }
-      if (c == ' ' || c == '\n' || c == '\t') {
-        if (! word.empty() && word != eos_symbol) {
-          sentence.push_back(word);
-          ++words_seen;
-          word.clear();
+      neg_sampling_strategy->step(
+        *language_model, language_model->lookup(*it));
+    }
+
+    vector<long> word_ids;
+    word_ids.reserve(sentence.size());
+    for (auto it = sentence.begin(); it != sentence.end(); ++it) {
+      long word_id = language_model->lookup(*it);
+      if (word_id >= 0) {
+        if (language_model->subsample(word_id)) {
+          word_ids.push_back(word_id);
         }
-        if (c == '\n') {
-          break;
-        }
-      } else {
-        word.push_back(c);
-      }
-      if (sentence.size() == SENTENCE_LIMIT) {
-        break;
+        ++words_seen;
       }
     }
 
-    time_t now = time(NULL);
-    if (difftime(now, start) >= 10) {
-      start = now;
-      info(__func__, "loaded sentence of " << sentence.size() <<
-        " new words (" << words_seen << " total), training ...\n");
+    sentence_learner.sentence_train(word_ids);
+
+    for (size_t input_word_pos = 0; input_word_pos < word_ids.size();
+         ++input_word_pos) {
+      sgd->step(word_ids[input_word_pos]);
     }
-    model->subsampling_sentence_learner->sentence_train(sentence);
+
+    time_t now = time(NULL);
+    if (difftime(now, prev_now) >= 5) {
+      info(__func__, "loaded " << (words_seen / 1000) << " kwords total, " <<
+          round(
+            (words_seen - prev_words_seen) / difftime(now, prev_now) / 1000
+          ) << " kwords/sec; training ...\n");
+      prev_words_seen = words_seen;
+      prev_now = now;
+    }
   }
+
+  time_t now = time(NULL);
+  info(__func__, "loaded " << (words_seen / 1000) << " kwords total, " <<
+      round(words_seen / difftime(now, start) / 1000) <<
+      " kwords/sec overall, " << difftime(now, start) << " sec\n");
+  prev_words_seen = words_seen;
+  prev_now = now;
 
   f.close();
 
   info(__func__, "saving ...\n");
-  FileSerializer<SGNSModel>(output_path).dump(*model);
+  FileSerializer<SGNSSentenceLearnerType>(output_path).dump(sentence_learner);
 
   info(__func__, "done\n");
 }

@@ -614,7 +614,7 @@ TEST_F(UniformSamplerTest, alias) {
   EXPECT_NEAR(sigma, sumsq[3] / num_samples, 6. * variance_sigma);
 }
 
-TEST_F(CountNormalizerTest, normalize) {
+TEST_F(ExponentCountNormalizerTest, normalize) {
   vector<size_t> counts = {7, 0, 12};
   vector<float> normalized = count_normalizer->normalize(counts);
   const float z = pow(7 + 4.2, 0.8) + pow(0 + 4.2, 0.8) + pow(12 + 4.2, 0.8);
@@ -623,16 +623,16 @@ TEST_F(CountNormalizerTest, normalize) {
   EXPECT_NEAR(pow(12 + 4.2, 0.8) / z, normalized[2], EPS);
 }
 
-TEST_F(CountNormalizerTest, serialization_fixed_point) {
+TEST_F(ExponentCountNormalizerTest, serialization_fixed_point) {
   stringstream ostream;
   count_normalizer->serialize(ostream);
   ostream.flush();
 
   stringstream istream(ostream.str());
-  auto from_stream(CountNormalizer::deserialize(istream));
+  auto from_stream(ExponentCountNormalizer::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
-  EXPECT_TRUE(count_normalizer->equals(*from_stream));
+  EXPECT_TRUE(count_normalizer->equals(from_stream));
 }
 
 TEST_F(ReservoirSamplerTest, sample) {
@@ -676,8 +676,6 @@ TEST_F(ReservoirSamplerTest, move_ctor) {
   EXPECT_EQ(-1, other[0]);
   EXPECT_EQ(7, other[1]);
   EXPECT_EQ(-1, other[2]);
-  EXPECT_EQ(0, sampler->size());
-  EXPECT_EQ(0, sampler->filled_size());
 }
 
 TEST(reservoir_sampler_test, accessors_mutators) {
@@ -809,7 +807,7 @@ TEST_F(ReservoirSamplerTest, serialization_fixed_point) {
   auto from_stream(ReservoirSampler<long>::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
-  EXPECT_TRUE(sampler->equals(*from_stream));
+  EXPECT_TRUE(sampler->equals(from_stream));
 }
 
 TEST_F(ReservoirSamplerTest, serialization_fixed_point_overfull) {
@@ -826,7 +824,7 @@ TEST_F(ReservoirSamplerTest, serialization_fixed_point_overfull) {
   auto from_stream(ReservoirSampler<long>::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
-  EXPECT_TRUE(sampler->equals(*from_stream));
+  EXPECT_TRUE(sampler->equals(from_stream));
 }
 
 TEST(reservoir_sampler_test, serialization_fixed_point_underfull) {
@@ -842,7 +840,7 @@ TEST(reservoir_sampler_test, serialization_fixed_point_underfull) {
   auto from_stream(ReservoirSampler<long>::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
-  EXPECT_TRUE(sampler.equals(*from_stream));
+  EXPECT_TRUE(sampler.equals(from_stream));
 }
 
 TEST_F(DiscretizationTest, sample) {

@@ -72,15 +72,6 @@ TEST(pair_cmp_test, individual) {
   EXPECT_FALSE(pair_first_cmp(f, f)); EXPECT_FALSE(pair_second_cmp(f, f));
 }
 
-TEST(sampling_strategy_test, serialization_exception) {
-  stringstream ostream;
-  Serializer<int>::serialize(-1, ostream);
-  ostream.flush();
-
-  stringstream istream(ostream.str());
-  EXPECT_THROW(SamplingStrategy::deserialize(istream), runtime_error);
-}
-
 TEST_F(UniformSamplingStrategyTest, sample_idx) {
   const size_t num_samples = 100000;
   float sum[] = {0, 0, 0};
@@ -133,45 +124,17 @@ TEST_F(UniformSamplingStrategyTest, step) {
   EXPECT_NEAR(1./3. * 2./3., sumsq[2] / num_samples, 6. * variance_sigma);
 }
 
-TEST_F(UniformSamplingStrategyTest, reset) {
-  strategy->step(*lm, 42);
-  strategy->reset(*lm, *reset_normalizer);
-
-  const size_t num_samples = 100000;
-  float sum[] = {0, 0, 0};
-  float sumsq[] = {0, 0, 0};
-  for (size_t t = 0; t < num_samples; ++t) {
-    const size_t word_idx = strategy->sample_idx(*lm);
-    sum[word_idx] += 1;
-    for (size_t w = 0; w < 3; ++w) {
-      sumsq[w] += pow((w == word_idx ? 1. : 0.) - 1./3., 2);
-    }
-  }
-  const float mean_sigma = sqrt(
-    (1./3. * 2./3.) / num_samples
-  );
-  EXPECT_NEAR(1./3., sum[0] / num_samples, 6. * mean_sigma);
-  EXPECT_NEAR(1./3., sum[1] / num_samples, 6. * mean_sigma);
-  EXPECT_NEAR(1./3., sum[2] / num_samples, 6. * mean_sigma);
-  const float variance_sigma = sqrt(
-    2. * (num_samples - 1.) * (1./3. * 2./3.) / pow(num_samples, 2)
-  );
-  EXPECT_NEAR(1./3. * 2./3., sumsq[0] / num_samples, 6. * variance_sigma);
-  EXPECT_NEAR(1./3. * 2./3., sumsq[1] / num_samples, 6. * variance_sigma);
-  EXPECT_NEAR(1./3. * 2./3., sumsq[2] / num_samples, 6. * variance_sigma);
-}
-
 TEST_F(UniformSamplingStrategyTest, serialization_fixed_point) {
   stringstream ostream;
   strategy->serialize(ostream);
   ostream.flush();
 
   stringstream istream(ostream.str());
-  auto from_stream(SamplingStrategy::deserialize(istream));
+  auto from_stream(UniformSamplingStrategy<MockLanguageModel>::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
   EXPECT_TRUE(strategy->equals(
-        dynamic_cast<const UniformSamplingStrategy&>(*from_stream)));
+        dynamic_cast<const UniformSamplingStrategy<MockLanguageModel> &>(from_stream)));
 }
 
 TEST_F(SmoothedEmpiricalSamplingStrategyTest, sample_idx) {
@@ -299,120 +262,17 @@ TEST_F(EmpiricalSamplingStrategyTest, step) {
   for (size_t i = 0; i < num_trials; ++i) { EXPECT_EQ(1, strategy->sample_idx(*lm)); }
 }
 
-TEST_F(SmoothedEmpiricalSamplingStrategyTest, reset) {
-  strategy->step(*lm, 42);
-
-  {
-    InSequence in_sequence;
-    EXPECT_CALL(*reset_lm, size()).WillRepeatedly(Return(3));
-    EXPECT_CALL(*reset_lm, counts()).WillRepeatedly(Return(reset_counts));
-    EXPECT_CALL(*reset_normalizer, normalize(reset_counts)).
-      WillRepeatedly(Return(normalized_reset_counts));
-  }
-
-  strategy->reset(*reset_lm, *reset_normalizer);
-
-  const size_t num_samples = 100000;
-  const float p_01 = 7./16.,
-               p_2 = 2./16.;
-
-  float sum[] = {0, 0, 0};
-  float sumsq[] = {0, 0, 0};
-  for (size_t t = 0; t < num_samples; ++t) {
-    const size_t word_idx = strategy->sample_idx(*lm);
-    sum[word_idx] += 1;
-    for (size_t w = 0; w < 3; ++w) {
-      sumsq[w] += pow((w == word_idx ? 1. : 0.) - (w == 2 ? p_2 : p_01), 2);
-    }
-  }
-
-  const float sigma_01 = p_01 * (1. - p_01);
-  const float sigma_2 = p_2 * (1. - p_2);
-  const float mean_sigma_01 = sqrt(
-    sigma_01 / num_samples
-  );
-  const float mean_sigma_2 = sqrt(
-    sigma_2 / num_samples
-  );
-  EXPECT_NEAR(p_01, sum[0] / num_samples, 6. * mean_sigma_01);
-  EXPECT_NEAR(p_01, sum[1] / num_samples, 6. * mean_sigma_01);
-  EXPECT_NEAR(p_2, sum[2] / num_samples, 6. * mean_sigma_2);
-  const float variance_sigma_01 = sqrt(
-    2. * (num_samples - 1.) * sigma_01 / pow(num_samples, 2)
-  );
-  const float variance_sigma_2 = sqrt(
-    2. * (num_samples - 1.) * sigma_2 / pow(num_samples, 2)
-  );
-  EXPECT_NEAR(sigma_01, sumsq[0] / num_samples, 6. * variance_sigma_01);
-  EXPECT_NEAR(sigma_01, sumsq[1] / num_samples, 6. * variance_sigma_01);
-  EXPECT_NEAR(sigma_2, sumsq[2] / num_samples, 6. * variance_sigma_2);
-}
-
-TEST_F(EmpiricalSamplingStrategyTest, reset) {
-  strategy->step(*lm, 42);
-
-  {
-    InSequence in_sequence;
-    EXPECT_CALL(*reset_lm, size()).WillRepeatedly(Return(3));
-    EXPECT_CALL(*reset_lm, counts()).WillRepeatedly(Return(reset_counts));
-    EXPECT_CALL(*reset_normalizer, normalize(reset_counts)).
-      WillRepeatedly(Return(normalized_reset_counts));
-  }
-
-  strategy->reset(*reset_lm, *reset_normalizer);
-
-  const size_t num_samples = 100000;
-  float sum[] = {0, 0, 0};
-  float sumsq[] = {0, 0, 0};
-  for (size_t t = 0; t < num_samples; ++t) {
-    const size_t word_idx = strategy->sample_idx(*lm);
-    sum[word_idx] += 1;
-    for (size_t w = 0; w < 3; ++w) {
-      sumsq[w] += pow((w == word_idx ? 1. : 0.) - (w == 2 ? 2./16. : 7./16.), 2);
-    }
-  }
-  const float sigma_01 = 7./16. * 9./16.;
-  const float sigma_2 = 2./16. * 14./16.;
-  const float mean_sigma_01 = sqrt(
-    sigma_01 / num_samples
-  );
-  const float mean_sigma_2 = sqrt(
-    sigma_2 / num_samples
-  );
-  EXPECT_NEAR(7./16., sum[0] / num_samples, 6. * mean_sigma_01);
-  EXPECT_NEAR(7./16., sum[1] / num_samples, 6. * mean_sigma_01);
-  EXPECT_NEAR(2./16., sum[2] / num_samples, 6. * mean_sigma_2);
-  const float variance_sigma_01 = sqrt(
-    2. * (num_samples - 1.) * sigma_01 / pow(num_samples, 2)
-  );
-  const float variance_sigma_2 = sqrt(
-    2. * (num_samples - 1.) * sigma_2 / pow(num_samples, 2)
-  );
-  EXPECT_NEAR(sigma_01, sumsq[0] / num_samples, 6. * variance_sigma_01);
-  EXPECT_NEAR(sigma_01, sumsq[1] / num_samples, 6. * variance_sigma_01);
-  EXPECT_NEAR(sigma_2, sumsq[2] / num_samples, 6. * variance_sigma_2);
-}
-
 TEST_F(EmpiricalSamplingStrategySerializationTest, serialization_fixed_point) {
   stringstream ostream;
   strategy->serialize(ostream);
   ostream.flush();
 
   stringstream istream(ostream.str());
-  auto from_stream(SamplingStrategy::deserialize(istream));
+  auto from_stream(EmpiricalSamplingStrategy<MockLanguageModel>::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
   EXPECT_TRUE(strategy->equals(
-        dynamic_cast<const EmpiricalSamplingStrategy&>(*from_stream)));
-}
-
-TEST(language_model_test, serialization_exception) {
-  stringstream ostream;
-  Serializer<int>::serialize(-1, ostream);
-  ostream.flush();
-
-  stringstream istream(ostream.str());
-  EXPECT_THROW(LanguageModel::deserialize(istream), runtime_error);
+        dynamic_cast<const EmpiricalSamplingStrategy<MockLanguageModel>&>(from_stream)));
 }
 
 TEST_F(EmpiricalSamplingStrategySerializationTest, initialized_serialization_fixed_point) {
@@ -427,11 +287,11 @@ TEST_F(EmpiricalSamplingStrategySerializationTest, initialized_serialization_fix
   ostream.flush();
 
   stringstream istream(ostream.str());
-  auto from_stream(SamplingStrategy::deserialize(istream));
+  auto from_stream(EmpiricalSamplingStrategy<MockLanguageModel>::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
   EXPECT_TRUE(strategy->equals(
-        dynamic_cast<const EmpiricalSamplingStrategy&>(*from_stream)));
+        dynamic_cast<const EmpiricalSamplingStrategy<MockLanguageModel>&>(from_stream)));
 }
 
 TEST_F(ReservoirSamplingStrategyTest, sample_idx) {
@@ -449,103 +309,44 @@ TEST_F(ReservoirSamplingStrategyTest, step) {
   strategy->step(*lm, 47);
 }
 
-TEST_F(ReservoirSamplingStrategyTest, reset) {
-  const size_t num_reset_samples = 100000;
-
-  EXPECT_CALL(*sampler, insert(47));
-  strategy->step(*lm, 47);
-
-  {
-    InSequence in_sequence;
-    EXPECT_CALL(*reset_lm, size()).WillRepeatedly(Return(3));
-    EXPECT_CALL(*reset_lm, counts()).WillRepeatedly(Return(reset_counts));
-    EXPECT_CALL(*reset_normalizer, normalize(reset_counts)).
-      WillRepeatedly(Return(normalized_reset_counts));
-    EXPECT_CALL(*sampler, clear());
-  }
-
-  vector<Counter> counters(3);
-  // count calls over the domain (we use Assign with an overloaded
-  // assignment op instead of something intuitive like Invoke because
-  // with an overloaded call op because of misc. technical limitations
-  // in gmock)
-  EXPECT_CALL(*sampler, insert(0)).WillRepeatedly(DoAll(Assign(&(counters[0]), 1), Return(-1L)));
-  EXPECT_CALL(*sampler, insert(1)).WillRepeatedly(DoAll(Assign(&(counters[1]), 1), Return(-1L)));
-  EXPECT_CALL(*sampler, insert(2)).WillRepeatedly(DoAll(Assign(&(counters[2]), 1), Return(-1L)));
-  EXPECT_CALL(*sampler, size()).WillRepeatedly(Return(num_reset_samples));
-
-  strategy->reset(*reset_lm, *reset_normalizer);
-
-  // insert was called correct number of times
-
-  vector<float> sumsq(3);
-  for (size_t i = 0; i < 3; ++i) {
-    for (size_t t = 0; t < counters[i].get(); ++t) {
-      for (size_t j = 0; j < 3; ++j) {
-        sumsq[j] += pow((i == j ? 1 : 0) - normalized_reset_counts[j], 2);
-      }
-    }
-  }
-
-  const float sigma_0 = normalized_reset_counts[0] * (1. - normalized_reset_counts[0]);
-  const float sigma_1 = normalized_reset_counts[1] * (1. - normalized_reset_counts[1]);
-  const float sigma_2 = normalized_reset_counts[2] * (1. - normalized_reset_counts[2]);
-  const float mean_sigma_0 = sqrt(
-    sigma_0 / num_reset_samples
-  );
-  const float mean_sigma_1 = sqrt(
-    sigma_1 / num_reset_samples
-  );
-  const float mean_sigma_2 = sqrt(
-    sigma_2 / num_reset_samples
-  );
-  EXPECT_NEAR(normalized_reset_counts[0], counters[0].get() / (float) num_reset_samples, 6. * mean_sigma_0);
-  EXPECT_NEAR(normalized_reset_counts[1], counters[1].get() / (float) num_reset_samples, 6. * mean_sigma_1);
-  EXPECT_NEAR(normalized_reset_counts[2], counters[2].get() / (float) num_reset_samples, 6. * mean_sigma_2);
-  const float variance_sigma_0 = sqrt(
-    2. * (num_reset_samples - 1.) * sigma_0 / pow(num_reset_samples, 2)
-  );
-  const float variance_sigma_1 = sqrt(
-    2. * (num_reset_samples - 1.) * sigma_1 / pow(num_reset_samples, 2)
-  );
-  const float variance_sigma_2 = sqrt(
-    2. * (num_reset_samples - 1.) * sigma_2 / pow(num_reset_samples, 2)
-  );
-  EXPECT_NEAR(sigma_0, sumsq[0] / num_reset_samples, 6. * variance_sigma_0);
-  EXPECT_NEAR(sigma_1, sumsq[1] / num_reset_samples, 6. * variance_sigma_1);
-  EXPECT_NEAR(sigma_2, sumsq[2] / num_reset_samples, 6. * variance_sigma_2);
-
-  // sampler behaves according to spec
-
-  EXPECT_CALL(*sampler, sample()).WillRepeatedly(Return(48));
-
-  const size_t num_samples = 100000;
-  for (size_t t = 0; t < num_samples; ++t) {
-    const size_t word_idx = strategy->sample_idx(*lm);
-    EXPECT_EQ(48, word_idx);
-  }
-}
-
 TEST_F(ReservoirSamplingStrategySerializationTest, serialization_fixed_point) {
   stringstream ostream;
   strategy->serialize(ostream);
   ostream.flush();
 
   stringstream istream(ostream.str());
-  auto from_stream(SamplingStrategy::deserialize(istream));
+  auto from_stream(ReservoirSamplingStrategy<MockLanguageModel>::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
   EXPECT_TRUE(strategy->equals(
-      dynamic_cast<const ReservoirSamplingStrategy&>(*from_stream)));
+      dynamic_cast<const ReservoirSamplingStrategy<MockLanguageModel>&>(from_stream)));
 }
 
-TEST(context_strategy_test, serialization_exception) {
+TEST_F(DiscreteSamplingStrategyTest, sample_idx) {
+  EXPECT_CALL(*discretization, sample()).WillRepeatedly(Return(47));
+
+  const size_t num_samples = 100000;
+  for (size_t t = 0; t < num_samples; ++t) {
+    const size_t word_idx = strategy->sample_idx(*lm);
+    EXPECT_EQ(47, word_idx);
+  }
+}
+
+TEST_F(DiscreteSamplingStrategyTest, step) {
+  strategy->step(*lm, 47);
+}
+
+TEST_F(DiscreteSamplingStrategySerializationTest, serialization_fixed_point) {
   stringstream ostream;
-  Serializer<int>::serialize(-1, ostream);
+  strategy->serialize(ostream);
   ostream.flush();
 
   stringstream istream(ostream.str());
-  EXPECT_THROW(ContextStrategy::deserialize(istream), runtime_error);
+  auto from_stream(DiscreteSamplingStrategy<MockLanguageModel>::deserialize(istream));
+  ASSERT_EQ(EOF, istream.peek());
+
+  EXPECT_TRUE(strategy->equals(
+      dynamic_cast<const DiscreteSamplingStrategy<MockLanguageModel>&>(from_stream)));
 }
 
 TEST_F(StaticContextStrategyTest, size) {
@@ -572,11 +373,11 @@ TEST_F(StaticContextStrategyTest, serialization_fixed_point) {
   ostream.flush();
 
   stringstream istream(ostream.str());
-  auto from_stream(ContextStrategy::deserialize(istream));
+  auto from_stream(StaticContextStrategy::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
   EXPECT_TRUE(strategy->equals(
-        dynamic_cast<const StaticContextStrategy&>(*from_stream)));
+        dynamic_cast<const StaticContextStrategy&>(from_stream)));
 }
 
 TEST_F(DynamicContextStrategyTest, size) {
@@ -701,11 +502,11 @@ TEST_F(DynamicContextStrategyTest, serialization_fixed_point) {
   ostream.flush();
 
   stringstream istream(ostream.str());
-  auto from_stream(ContextStrategy::deserialize(istream));
+  auto from_stream(DynamicContextStrategy::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
   EXPECT_TRUE(strategy->equals(
-        dynamic_cast<const DynamicContextStrategy&>(*from_stream)));
+        dynamic_cast<const DynamicContextStrategy&>(from_stream)));
 }
 
 TEST(space_saving_language_model_test, subsample_none) {
@@ -986,10 +787,10 @@ TEST_F(SpaceSavingLanguageModelUnfullSerializationTest, fixed_point) {
   ostream.flush();
 
   stringstream istream(ostream.str());
-  auto from_stream(LanguageModel::deserialize(istream));
+  auto from_stream(SpaceSavingLanguageModel::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
-  EXPECT_TRUE(lm->equals(*from_stream));
+  EXPECT_TRUE(lm->equals(from_stream));
 }
 
 TEST_F(SpaceSavingLanguageModelUnfullSerializationTest,
@@ -999,10 +800,10 @@ TEST_F(SpaceSavingLanguageModelUnfullSerializationTest,
   ostream.flush();
 
   stringstream istream(ostream.str());
-  auto from_stream(LanguageModel::deserialize(istream));
+  auto from_stream(SpaceSavingLanguageModel::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
-  EXPECT_TRUE(lm->equals(*from_stream));
+  EXPECT_TRUE(lm->equals(from_stream));
 }
 
 TEST_F(SpaceSavingLanguageModelSerializationTest, fixed_point) {
@@ -1011,10 +812,10 @@ TEST_F(SpaceSavingLanguageModelSerializationTest, fixed_point) {
   ostream.flush();
 
   stringstream istream(ostream.str());
-  auto from_stream(LanguageModel::deserialize(istream));
+  auto from_stream(SpaceSavingLanguageModel::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
-  EXPECT_TRUE(lm->equals(*from_stream));
+  EXPECT_TRUE(lm->equals(from_stream));
 }
 
 TEST_F(SpaceSavingLanguageModelSerializationTest, dimension_fixed_point) {
@@ -1023,10 +824,10 @@ TEST_F(SpaceSavingLanguageModelSerializationTest, dimension_fixed_point) {
   ostream.flush();
 
   stringstream istream(ostream.str());
-  auto from_stream(LanguageModel::deserialize(istream));
+  auto from_stream(SpaceSavingLanguageModel::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
-  EXPECT_TRUE(lm->equals(*from_stream));
+  EXPECT_TRUE(lm->equals(from_stream));
 }
 
 TEST_F(SpaceSavingLanguageModelTest,
@@ -1036,10 +837,10 @@ TEST_F(SpaceSavingLanguageModelTest,
   ostream.flush();
 
   stringstream istream(ostream.str());
-  auto from_stream(LanguageModel::deserialize(istream));
+  auto from_stream(SpaceSavingLanguageModel::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
-  EXPECT_TRUE(lm->equals(*from_stream));
+  EXPECT_TRUE(lm->equals(from_stream));
 }
 
 TEST(naive_language_model_test, subsample_none) {
@@ -1392,10 +1193,10 @@ TEST_F(NaiveLanguageModelSerializationTest, fixed_point) {
   ostream.flush();
 
   stringstream istream(ostream.str());
-  auto from_stream(LanguageModel::deserialize(istream));
+  auto from_stream(NaiveLanguageModel::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
-  EXPECT_TRUE(lm->equals(*from_stream));
+  EXPECT_TRUE(lm->equals(from_stream));
 }
 
 TEST_F(NaiveLanguageModelSerializationTest, dimension_fixed_point) {
@@ -1404,10 +1205,10 @@ TEST_F(NaiveLanguageModelSerializationTest, dimension_fixed_point) {
   ostream.flush();
 
   stringstream istream(ostream.str());
-  auto from_stream(LanguageModel::deserialize(istream));
+  auto from_stream(NaiveLanguageModel::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
-  EXPECT_TRUE(lm->equals(*from_stream));
+  EXPECT_TRUE(lm->equals(from_stream));
 }
 
 TEST_F(NaiveLanguageModelTest,
@@ -1417,10 +1218,10 @@ TEST_F(NaiveLanguageModelTest,
   ostream.flush();
 
   stringstream istream(ostream.str());
-  auto from_stream(LanguageModel::deserialize(istream));
+  auto from_stream(NaiveLanguageModel::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
-  EXPECT_TRUE(lm->equals(*from_stream));
+  EXPECT_TRUE(lm->equals(from_stream));
 }
 
 TEST_F(WordContextFactorizationTest, dimension) {
@@ -1475,7 +1276,7 @@ TEST_F(WordContextFactorizationSerializationTest, fixed_point) {
   auto from_stream(WordContextFactorization::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
-  EXPECT_TRUE(factorization->equals(*from_stream));
+  EXPECT_TRUE(factorization->equals(from_stream));
 }
 
 TEST_F(WordContextFactorizationSerializationTest, dimension_fixed_point) {
@@ -1487,7 +1288,7 @@ TEST_F(WordContextFactorizationSerializationTest, dimension_fixed_point) {
   auto from_stream(WordContextFactorization::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
-  EXPECT_TRUE(factorization->equals(*from_stream));
+  EXPECT_TRUE(factorization->equals(from_stream));
 }
 
 TEST_F(OneDimSGDTest, step) {
@@ -1620,7 +1421,7 @@ TEST_F(SGDSerializationTest, fixed_point) {
   auto from_stream(SGD::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
-  EXPECT_TRUE(sgd->equals(*from_stream));
+  EXPECT_TRUE(sgd->equals(from_stream));
 }
 
 TEST_F(SGDSerializationTest, schedule_fixed_point) {
@@ -1632,7 +1433,7 @@ TEST_F(SGDSerializationTest, schedule_fixed_point) {
   auto from_stream(SGD::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
-  EXPECT_TRUE(sgd->equals(*from_stream));
+  EXPECT_TRUE(sgd->equals(from_stream));
 }
 
 TEST_F(SGDSerializationTest, dimension_fixed_point) {
@@ -1644,137 +1445,5 @@ TEST_F(SGDSerializationTest, dimension_fixed_point) {
   auto from_stream(SGD::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
-  EXPECT_TRUE(sgd->equals(*from_stream));
-}
-
-TEST_F(LanguageModelExampleStoreTest, get_language_model) {
-  EXPECT_CALL(*lm, equals(Ref(*lm))).WillOnce(Return(true));
-  EXPECT_TRUE(lm->equals(example_store->get_language_model()));
-}
-
-TEST_F(LanguageModelExampleStoreTest, increment) {
-  InSequence in_sequence;
-
-  EXPECT_CALL(*lm, increment("foo")).
-    WillOnce(Return(make_pair(-1L, string())));
-  EXPECT_CALL(*lm, lookup("foo")).WillOnce(Return(3L));
-
-  example_store->increment("foo", 42L);
-
-  EXPECT_EQ(2, example_store->get_examples(0).size());
-  EXPECT_EQ(0, example_store->get_examples(0).filled_size());
-  EXPECT_EQ(2, example_store->get_examples(1).size());
-  EXPECT_EQ(0, example_store->get_examples(1).filled_size());
-  EXPECT_EQ(2, example_store->get_examples(2).size());
-  EXPECT_EQ(0, example_store->get_examples(2).filled_size());
-  EXPECT_EQ(2, example_store->get_examples(3).size());
-  EXPECT_EQ(1, example_store->get_examples(3).filled_size());
-  EXPECT_EQ(42L, example_store->get_examples(3)[0]);
-
-  EXPECT_CALL(*lm, increment("foo")).
-    WillOnce(Return(make_pair(-1L, string())));
-  EXPECT_CALL(*lm, lookup("foo")).WillOnce(Return(3L));
-
-  example_store->increment("foo", 47L);
-
-  EXPECT_EQ(2, example_store->get_examples(0).size());
-  EXPECT_EQ(0, example_store->get_examples(0).filled_size());
-  EXPECT_EQ(2, example_store->get_examples(1).size());
-  EXPECT_EQ(0, example_store->get_examples(1).filled_size());
-  EXPECT_EQ(2, example_store->get_examples(2).size());
-  EXPECT_EQ(0, example_store->get_examples(2).filled_size());
-  EXPECT_EQ(2, example_store->get_examples(3).size());
-  EXPECT_EQ(2, example_store->get_examples(3).filled_size());
-  EXPECT_EQ(42L, example_store->get_examples(3)[0]);
-  EXPECT_EQ(47L, example_store->get_examples(3)[1]);
-
-  EXPECT_CALL(*lm, increment("bar")).
-    WillOnce(Return(make_pair(-1L, string())));
-  EXPECT_CALL(*lm, lookup("bar")).WillOnce(Return(1L));
-
-  example_store->increment("bar", 7L);
-
-  EXPECT_EQ(2, example_store->get_examples(0).size());
-  EXPECT_EQ(0, example_store->get_examples(0).filled_size());
-  EXPECT_EQ(2, example_store->get_examples(1).size());
-  EXPECT_EQ(1, example_store->get_examples(1).filled_size());
-  EXPECT_EQ(7L, example_store->get_examples(1)[0]);
-  EXPECT_EQ(2, example_store->get_examples(2).size());
-  EXPECT_EQ(0, example_store->get_examples(2).filled_size());
-  EXPECT_EQ(2, example_store->get_examples(3).size());
-  EXPECT_EQ(2, example_store->get_examples(3).filled_size());
-  EXPECT_EQ(42L, example_store->get_examples(3)[0]);
-  EXPECT_EQ(47L, example_store->get_examples(3)[1]);
-
-  EXPECT_CALL(*lm, increment("foo")).
-    WillOnce(Return(make_pair(-1L, string())));
-  EXPECT_CALL(*lm, lookup("foo")).WillOnce(Return(3L));
-
-  example_store->increment("foo", 7L);
-
-  EXPECT_EQ(2, example_store->get_examples(0).size());
-  EXPECT_EQ(0, example_store->get_examples(0).filled_size());
-  EXPECT_EQ(2, example_store->get_examples(1).size());
-  EXPECT_EQ(1, example_store->get_examples(1).filled_size());
-  EXPECT_EQ(7L, example_store->get_examples(1)[0]);
-  EXPECT_EQ(2, example_store->get_examples(2).size());
-  EXPECT_EQ(0, example_store->get_examples(2).filled_size());
-  EXPECT_EQ(2, example_store->get_examples(3).size());
-  EXPECT_EQ(2, example_store->get_examples(3).filled_size());
-
-  EXPECT_CALL(*lm, increment("foo")).
-    WillOnce(Return(make_pair(-1L, string())));
-  EXPECT_CALL(*lm, lookup("foo")).WillOnce(Return(5L));
-
-  example_store->increment("foo", 9L);
-
-  EXPECT_EQ(2, example_store->get_examples(0).size());
-  EXPECT_EQ(0, example_store->get_examples(0).filled_size());
-  EXPECT_EQ(2, example_store->get_examples(1).size());
-  EXPECT_EQ(1, example_store->get_examples(1).filled_size());
-  EXPECT_EQ(7L, example_store->get_examples(1)[0]);
-  EXPECT_EQ(2, example_store->get_examples(2).size());
-  EXPECT_EQ(0, example_store->get_examples(2).filled_size());
-  EXPECT_EQ(2, example_store->get_examples(3).size());
-  EXPECT_EQ(2, example_store->get_examples(3).filled_size());
-  EXPECT_EQ(2, example_store->get_examples(4).size());
-  EXPECT_EQ(0, example_store->get_examples(4).filled_size());
-  EXPECT_EQ(2, example_store->get_examples(5).size());
-  EXPECT_EQ(1, example_store->get_examples(5).filled_size());
-  EXPECT_EQ(9L, example_store->get_examples(5)[0]);
-
-  EXPECT_CALL(*lm, increment("baz")).
-    WillOnce(Return(make_pair(3L, string())));
-  EXPECT_CALL(*lm, lookup("baz")).WillOnce(Return(3L));
-
-  example_store->increment("baz", 5L);
-
-  EXPECT_EQ(2, example_store->get_examples(0).size());
-  EXPECT_EQ(0, example_store->get_examples(0).filled_size());
-  EXPECT_EQ(2, example_store->get_examples(1).size());
-  EXPECT_EQ(1, example_store->get_examples(1).filled_size());
-  EXPECT_EQ(7L, example_store->get_examples(1)[0]);
-  EXPECT_EQ(2, example_store->get_examples(2).size());
-  EXPECT_EQ(0, example_store->get_examples(2).filled_size());
-  EXPECT_EQ(2, example_store->get_examples(3).size());
-  EXPECT_EQ(1, example_store->get_examples(3).filled_size());
-  EXPECT_EQ(5L, example_store->get_examples(3)[0]);
-  EXPECT_EQ(2, example_store->get_examples(4).size());
-  EXPECT_EQ(0, example_store->get_examples(4).filled_size());
-  EXPECT_EQ(2, example_store->get_examples(5).size());
-  EXPECT_EQ(1, example_store->get_examples(5).filled_size());
-  EXPECT_EQ(9L, example_store->get_examples(5)[0]);
-}
-
-TEST_F(LanguageModelExampleStoreSerializationTest, serialization_fixed_point) {
-  stringstream ostream;
-  example_store->serialize(ostream);
-  ostream.flush();
-
-  stringstream istream(ostream.str());
-  auto from_stream(LanguageModelExampleStore<long>::deserialize(istream));
-  ASSERT_EQ(EOF, istream.peek());
-
-  EXPECT_TRUE(example_store->equals(
-        dynamic_cast<const LanguageModelExampleStore<long>&>(*from_stream)));
+  EXPECT_TRUE(sgd->equals(from_stream));
 }

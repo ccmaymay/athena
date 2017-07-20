@@ -8,9 +8,8 @@
 #include <gmock/gmock.h>
 
 
-class MockSGNSTokenLearner : public SGNSTokenLearner {
+class MockSGNSTokenLearner {
   public:
-    using SGNSTokenLearner::SGNSTokenLearner;
     MOCK_METHOD1(reset_word, void (long word_idx));
     MOCK_METHOD3(token_train, void (size_t target_word_idx,
                                     size_t context_word_idx,
@@ -26,36 +25,18 @@ class MockSGNSTokenLearner : public SGNSTokenLearner {
     MOCK_METHOD3(find_context_nearest_neighbor_idx,
                  long (size_t left_context, size_t right_context,
                        const long *word_ids));
-    MOCK_METHOD1(set_model, void (std::shared_ptr<SGNSModel> model));
 
     MOCK_CONST_METHOD1(serialize, void (std::ostream& stream));
-    MOCK_CONST_METHOD1(equals, bool (const SGNSTokenLearner& other));
+    MOCK_CONST_METHOD1(equals, bool (const MockSGNSTokenLearner& other));
 };
 
 
-class MockSGNSSentenceLearner : public SGNSSentenceLearner {
+class MockSGNSSentenceLearner {
   public:
-    MockSGNSSentenceLearner():
-      SGNSSentenceLearner(5, true) { }
-    MOCK_METHOD1(increment, void (const std::string& word));
     MOCK_METHOD1(sentence_train, void (const std::vector<std::string>& words));
-    MOCK_METHOD1(set_model, void (std::shared_ptr<SGNSModel> model));
 
     MOCK_CONST_METHOD1(serialize, void (std::ostream& stream));
-    MOCK_CONST_METHOD1(equals, bool (const SGNSSentenceLearner& other));
-};
-
-
-class MockSubsamplingSGNSSentenceLearner : public SubsamplingSGNSSentenceLearner {
-  public:
-    MockSubsamplingSGNSSentenceLearner():
-      SubsamplingSGNSSentenceLearner(true) { }
-    MOCK_METHOD1(increment, void (const std::string& word));
-    MOCK_METHOD1(sentence_train, void (const std::vector<std::string>& words));
-    MOCK_METHOD1(set_model, void (std::shared_ptr<SGNSModel> model));
-
-    MOCK_CONST_METHOD1(serialize, void (std::ostream& stream));
-    MOCK_CONST_METHOD1(equals, bool (const SubsamplingSGNSSentenceLearner& other));
+    MOCK_CONST_METHOD1(equals, bool (const MockSGNSSentenceLearner& other));
 };
 
 

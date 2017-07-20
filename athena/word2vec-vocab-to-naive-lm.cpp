@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
   seed_default();
 
   info(__func__, "initializing model ...\n");
-  auto language_model(make_shared<NaiveLanguageModel>(subsample_threshold));
+  NaiveLanguageModel language_model(subsample_threshold);
 
   info(__func__, "loading words into vocabulary ...\n");
   string word;
@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
       unsigned long count = 1;
       f >> count;
       for (size_t i = 0; i < count; ++i) {
-        language_model->increment(word);
+        language_model.increment(word);
       }
       if (f.get() != '\n') {
         throw runtime_error(string("malformatted vocabulary"));
@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
   f.close();
 
   info(__func__, "saving ...\n");
-  FileSerializer<LanguageModel>(output_path).dump(*language_model);
+  FileSerializer<NaiveLanguageModel>(output_path).dump(language_model);
 
   info(__func__, "done\n");
 }

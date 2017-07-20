@@ -14,7 +14,7 @@
 using namespace std;
 
 void usage(ostream& s, const string& program) {
-  s << "Train Space-Saving language model from text file.\n";
+  s << "Train naive language model from text file.\n";
   s << "\n";
   s << "Usage: " << program << " [...] <input-path> <output-path>\n";
   s << "\n";
@@ -70,8 +70,7 @@ int main(int argc, char **argv) {
   seed_default();
 
   info(__func__, "initializing model ...\n");
-  auto language_model(
-    make_shared<SpaceSavingLanguageModel>(vocab_dim, subsample_threshold));
+  NaiveLanguageModel language_model(subsample_threshold);
 
   info(__func__, "loading words into vocabulary ...\n");
   string word;
@@ -80,9 +79,12 @@ int main(int argc, char **argv) {
   stream_ready_or_throw(f);
   while (f) {
     const char c = f.get();
+    if (c == '\r') {
+      continue;
+    }
     if (c == ' ' || c == '\n' || c == '\t' || c == '\r') {
       if (! word.empty()) {
-        language_model->increment(word);
+        language_model.increment(word);
         word.clear();
       }
     } else {
@@ -91,8 +93,11 @@ int main(int argc, char **argv) {
   }
   f.close();
 
+  info(__func__, "truncating language model ...\n");
+  language_model.truncate(vocab_dim);
+
   info(__func__, "saving ...\n");
-  FileSerializer<LanguageModel>(output_path).dump(*language_model);
+  FileSerializer<NaiveLanguageModel>(output_path).dump(language_model);
 
   info(__func__, "done\n");
 }

@@ -4,6 +4,7 @@
 
 #include "_core.h"
 #include <cmath>
+#include <memory>
 #include "core_mock.h"
 #include "math_mock.h"
 #include "test_util.h"
@@ -177,24 +178,13 @@ class SGDSerializationTest: public ::testing::Test {
 
 class UniformSamplingStrategyTest: public ::testing::Test {
   protected:
-    std::vector<size_t> reset_counts;
-    std::vector<float> normalized_reset_counts;
-    std::shared_ptr<MockLanguageModel> reset_lm;
     std::shared_ptr<MockLanguageModel> lm;
-    std::shared_ptr<UniformSamplingStrategy> strategy;
-    std::shared_ptr<MockCountNormalizer> reset_normalizer;
+    std::shared_ptr<UniformSamplingStrategy<MockLanguageModel> > strategy;
 
     virtual void SetUp() {
       lm = std::make_shared<MockLanguageModel>();
       EXPECT_CALL(*lm, size()).WillRepeatedly(Return(3));
-      strategy = std::make_shared<UniformSamplingStrategy>();
-
-      reset_lm = std::make_shared<MockLanguageModel>();
-
-      reset_counts = {5, 5, 2};
-      normalized_reset_counts = {7./16., 7./16., 2./16.};
-
-      reset_normalizer = std::make_shared<MockCountNormalizer>();
+      strategy = std::make_shared<UniformSamplingStrategy<MockLanguageModel> >();
     }
 
     virtual void TearDown() { }
@@ -202,13 +192,9 @@ class UniformSamplingStrategyTest: public ::testing::Test {
 
 class EmpiricalSamplingStrategyTest: public ::testing::Test {
   protected:
-    std::vector<size_t> reset_counts;
-    std::vector<float> normalized_reset_counts;
-    std::shared_ptr<MockLanguageModel> reset_lm;
     std::shared_ptr<MockLanguageModel> lm;
-    std::shared_ptr<EmpiricalSamplingStrategy> strategy;
+    std::shared_ptr<EmpiricalSamplingStrategy<MockLanguageModel, MockCountNormalizer> > strategy;
     std::shared_ptr<MockCountNormalizer> count_normalizer;
-    std::shared_ptr<MockCountNormalizer> reset_normalizer;
 
     virtual void SetUp() {
       lm = std::make_shared<MockLanguageModel>();
@@ -221,15 +207,7 @@ class EmpiricalSamplingStrategyTest: public ::testing::Test {
       EXPECT_CALL(*count_normalizer, normalize(_counts)).
         WillRepeatedly(Return(_normalized_counts));
 
-      strategy = std::make_shared<EmpiricalSamplingStrategy>(count_normalizer,
-                                                             5, 2);
-
-      reset_lm = std::make_shared<MockLanguageModel>();
-
-      reset_counts = {5, 5, 2};
-      normalized_reset_counts = {7./16., 7./16., 2./16.};
-
-      reset_normalizer = std::make_shared<MockCountNormalizer>();
+      strategy = std::make_shared<EmpiricalSamplingStrategy<MockLanguageModel, MockCountNormalizer> >(count_normalizer, 5, 2);
     }
 
     virtual void TearDown() { }
@@ -237,13 +215,12 @@ class EmpiricalSamplingStrategyTest: public ::testing::Test {
 
 class EmpiricalSamplingStrategySerializationTest: public ::testing::Test {
   protected:
-    std::shared_ptr<EmpiricalSamplingStrategy> strategy;
-    std::shared_ptr<CountNormalizer> count_normalizer;
+    std::shared_ptr<EmpiricalSamplingStrategy<MockLanguageModel> > strategy;
+    std::shared_ptr<ExponentCountNormalizer> count_normalizer;
 
     virtual void SetUp() {
-      count_normalizer = std::make_shared<CountNormalizer>();
-      strategy = std::make_shared<EmpiricalSamplingStrategy>(count_normalizer,
-                                                             5, 2);
+      count_normalizer = std::make_shared<ExponentCountNormalizer>(0.8, 8);
+      strategy = std::make_shared<EmpiricalSamplingStrategy<MockLanguageModel> >(count_normalizer, 5, 2);
     }
 
     virtual void TearDown() { }
@@ -252,13 +229,9 @@ class EmpiricalSamplingStrategySerializationTest: public ::testing::Test {
 class SmoothedEmpiricalSamplingStrategyTest: public ::testing::Test {
   protected:
     float smoothing_exponent, smoothing_offset;
-    std::vector<size_t> reset_counts;
-    std::vector<float> normalized_reset_counts;
-    std::shared_ptr<MockLanguageModel> reset_lm;
     std::shared_ptr<MockLanguageModel> lm;
-    std::shared_ptr<EmpiricalSamplingStrategy> strategy;
+    std::shared_ptr<EmpiricalSamplingStrategy<MockLanguageModel, MockCountNormalizer> > strategy;
     std::shared_ptr<MockCountNormalizer> count_normalizer;
-    std::shared_ptr<MockCountNormalizer> reset_normalizer;
 
     virtual void SetUp() {
       lm = std::make_shared<MockLanguageModel>();
@@ -282,14 +255,7 @@ class SmoothedEmpiricalSamplingStrategyTest: public ::testing::Test {
       EXPECT_CALL(*count_normalizer, normalize(_counts)).
         WillRepeatedly(Return(_normalized_counts));
 
-      strategy = std::make_shared<EmpiricalSamplingStrategy>(count_normalizer);
-
-      reset_lm = std::make_shared<MockLanguageModel>();
-
-      reset_counts = {5, 5, 2};
-      normalized_reset_counts = {7./16., 7./16., 2./16.};
-
-      reset_normalizer = std::make_shared<MockCountNormalizer>();
+      strategy = std::make_shared<EmpiricalSamplingStrategy<MockLanguageModel, MockCountNormalizer> >(count_normalizer);
     }
 
     virtual void TearDown() { }
@@ -297,27 +263,16 @@ class SmoothedEmpiricalSamplingStrategyTest: public ::testing::Test {
 
 class ReservoirSamplingStrategyTest: public ::testing::Test {
   protected:
-    std::vector<size_t> reset_counts;
-    std::vector<float> normalized_reset_counts;
-    std::shared_ptr<MockLanguageModel> reset_lm;
     std::shared_ptr<MockLanguageModel> lm;
-    std::shared_ptr<ReservoirSamplingStrategy> strategy;
+    std::shared_ptr<ReservoirSamplingStrategy<MockLanguageModel, MockLongReservoirSampler> > strategy;
     std::shared_ptr<MockLongReservoirSampler> sampler;
-    std::shared_ptr<MockCountNormalizer> reset_normalizer;
 
     virtual void SetUp() {
       lm = std::make_shared<MockLanguageModel>();
 
-      sampler = std::make_shared<MockLongReservoirSampler>(9);
+      sampler = std::make_shared<MockLongReservoirSampler>();
 
-      strategy = std::make_shared<ReservoirSamplingStrategy>(sampler);
-
-      reset_lm = std::make_shared<MockLanguageModel>();
-
-      reset_counts = {5, 5, 2};
-      normalized_reset_counts = {7./16., 7./16., 2./16.};
-
-      reset_normalizer = std::make_shared<MockCountNormalizer>();
+      strategy = std::make_shared<ReservoirSamplingStrategy<MockLanguageModel, MockLongReservoirSampler> >(sampler);
     }
 
     virtual void TearDown() { }
@@ -325,12 +280,43 @@ class ReservoirSamplingStrategyTest: public ::testing::Test {
 
 class ReservoirSamplingStrategySerializationTest: public ::testing::Test {
   protected:
-    std::shared_ptr<ReservoirSamplingStrategy> strategy;
+    std::shared_ptr<ReservoirSamplingStrategy<MockLanguageModel> > strategy;
     std::shared_ptr<ReservoirSampler<long> > sampler;
 
     virtual void SetUp() {
       sampler = std::make_shared<ReservoirSampler<long> >(9);
-      strategy = std::make_shared<ReservoirSamplingStrategy>(sampler);
+      strategy = std::make_shared<ReservoirSamplingStrategy<MockLanguageModel> >(sampler);
+    }
+
+    virtual void TearDown() { }
+};
+
+class DiscreteSamplingStrategyTest: public ::testing::Test {
+  protected:
+    std::shared_ptr<MockLanguageModel> lm;
+    std::shared_ptr<DiscreteSamplingStrategy<MockLanguageModel, MockDiscretization> > strategy;
+    std::shared_ptr<MockDiscretization> discretization;
+
+    virtual void SetUp() {
+      lm = std::make_shared<MockLanguageModel>();
+
+      discretization = std::make_shared<MockDiscretization>();
+
+      strategy = std::make_shared<DiscreteSamplingStrategy<MockLanguageModel, MockDiscretization> >(discretization);
+    }
+
+    virtual void TearDown() { }
+};
+
+class DiscreteSamplingStrategySerializationTest: public ::testing::Test {
+  protected:
+    std::shared_ptr<DiscreteSamplingStrategy<MockLanguageModel> > strategy;
+    std::shared_ptr<Discretization> discretization;
+
+    virtual void SetUp() {
+      const std::vector<float> _normalized_counts = {2./7., 2./7., 3./7.};
+      discretization = std::make_shared<Discretization>(_normalized_counts, 9);
+      strategy = std::make_shared<DiscreteSamplingStrategy<MockLanguageModel> >(discretization);
     }
 
     virtual void TearDown() { }
@@ -353,38 +339,6 @@ class DynamicContextStrategyTest: public ::testing::Test {
 
     virtual void SetUp() {
       strategy = std::make_shared<DynamicContextStrategy>(3);
-    }
-
-    virtual void TearDown() { }
-};
-
-class LanguageModelExampleStoreTest: public ::testing::Test {
-  protected:
-    std::shared_ptr<MockLanguageModel> lm;
-    std::shared_ptr<LanguageModelExampleStore<long> > example_store;
-
-    virtual void SetUp() {
-      lm = std::make_shared<MockLanguageModel>();
-      example_store = std::make_shared<LanguageModelExampleStore<long> >(lm, 2);
-    }
-
-    virtual void TearDown() { }
-};
-
-class LanguageModelExampleStoreSerializationTest: public ::testing::Test {
-  protected:
-    std::shared_ptr<SpaceSavingLanguageModel> lm;
-    std::shared_ptr<LanguageModelExampleStore<long> > example_store;
-
-    virtual void SetUp() {
-      lm = std::make_shared<SpaceSavingLanguageModel>(3);
-      example_store = std::make_shared<LanguageModelExampleStore<long> >(lm, 2);
-      example_store->increment("foo", 42L);
-      example_store->increment("foo", 47L);
-      example_store->increment("bar", 7L);
-      example_store->increment("foo", 7L);
-      example_store->increment("foo", 9L);
-      example_store->increment("baz", 5L);
     }
 
     virtual void TearDown() { }

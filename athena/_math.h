@@ -50,15 +50,14 @@ class AlignedVector {
     const float& operator[](size_t i) const { return _data[i]; }
     float& operator[](size_t i) { return _data[i]; }
     void resize(size_t size);
-    ~AlignedVector();
+    virtual ~AlignedVector();
 
     AlignedVector(AlignedVector&& other);
+    AlignedVector(const AlignedVector& other);
 
-    /*
     bool equals(const AlignedVector& other) const;
     void serialize(std::ostream& stream) const;
-    static AlignedVector* deserialize(std::istream& stream);
-    */
+    static AlignedVector deserialize(std::istream& stream);
 };
 
 bool operator==(const AlignedVector& lhs, const AlignedVector& rhs);
@@ -121,24 +120,24 @@ void sample_centered_uniform_vector(size_t n, T *z) {
 }
 
 
-class CountNormalizer {
+class ExponentCountNormalizer {
   float _exponent;
   float _offset;
 
   public:
-    CountNormalizer(float exponent = 1, float offset = 0);
+    ExponentCountNormalizer(float exponent = 1, float offset = 0);
     std::vector<float> normalize(const std::vector<size_t>&
                                             counts) const;
-    ~CountNormalizer() { }
+    virtual ~ExponentCountNormalizer() { }
 
-    /*
-    virtual bool equals(const CountNormalizer& other) const;
-    virtual void serialize(std::ostream& stream) const;
-    static CountNormalizer* deserialize(std::istream& stream);
-    */
+    ExponentCountNormalizer(ExponentCountNormalizer&& other):
+        _exponent(other._exponent), _offset(other._offset) { }
+    ExponentCountNormalizer(const ExponentCountNormalizer& other):
+        _exponent(other._exponent), _offset(other._offset) { }
 
-  private:
-    CountNormalizer(const CountNormalizer& count_normalizer);
+    bool equals(const ExponentCountNormalizer& other) const;
+    void serialize(std::ostream& stream) const;
+    static ExponentCountNormalizer deserialize(std::istream& stream);
 };
 
 
@@ -149,26 +148,22 @@ class NaiveSampler {
   public:
     NaiveSampler(const std::vector<float>& probabilities);
     size_t sample() const;
-    ~NaiveSampler() { }
+    virtual ~NaiveSampler() { }
 
-    /*
-    virtual bool equals(const NaiveSampler& other) const;
-    virtual void serialize(std::ostream& stream) const;
-    static NaiveSampler* deserialize(std::istream& stream);
-    */
+    bool equals(const NaiveSampler& other) const;
+    void serialize(std::ostream& stream) const;
+    static NaiveSampler deserialize(std::istream& stream);
 
     NaiveSampler(size_t size,
                  std::vector<float>&& probability_table):
-      _size(size),
-      _probability_table(
-        std::forward<std::vector<float> >(probability_table)) { }
+        _size(size),
+        _probability_table(std::move(probability_table)) { }
     NaiveSampler(NaiveSampler&& other):
-      _size(other._size),
-      _probability_table(
-        std::move(other._probability_table)) { }
-
-  private:
-    NaiveSampler(const NaiveSampler& naive_sampler);
+        _size(other._size),
+        _probability_table(std::move(other._probability_table)) { }
+    NaiveSampler(const NaiveSampler& other):
+        _size(other._size),
+        _probability_table(other._probability_table) { }
 };
 
 
@@ -180,30 +175,29 @@ class AliasSampler {
   public:
     AliasSampler(const std::vector<float>& probabilities);
     size_t sample() const;
-    ~AliasSampler() { }
+    virtual ~AliasSampler() { }
 
-    /*
-    virtual bool equals(const AliasSampler& other) const;
-    virtual void serialize(std::ostream& stream) const;
-    static AliasSampler* deserialize(std::istream& stream);
-    */
+    bool equals(const AliasSampler& other) const;
+    void serialize(std::ostream& stream) const;
+    static AliasSampler deserialize(std::istream& stream);
 
     AliasSampler(size_t size,
                  std::vector<size_t>&& alias_table,
                  std::vector<float>&& probability_table):
-      _size(size),
-      _alias_table(std::forward<std::vector<size_t> >(alias_table)),
-      _probability_table(
-        std::forward<std::vector<float> >(probability_table)) { }
-
+        _size(size),
+        _alias_table(std::move(alias_table)),
+        _probability_table(std::move(probability_table)) { }
     AliasSampler(AliasSampler&& other):
-      _size(other._size),
-      _alias_table(std::move(other._alias_table)),
-      _probability_table(
-        std::move(other._probability_table)) { }
+        _size(other._size),
+        _alias_table(std::move(other._alias_table)),
+        _probability_table(std::move(other._probability_table)) { }
+    AliasSampler(const AliasSampler& other):
+        _size(other._size),
+        _alias_table(other._alias_table),
+        _probability_table(other._probability_table) { }
 
-  private:
-    AliasSampler(const AliasSampler& alias_sampler);
+    AliasSampler& operator=(AliasSampler const & other);
+    AliasSampler& operator=(AliasSampler && other);
 };
 
 
@@ -228,26 +222,28 @@ class ReservoirSampler {
     size_t filled_size() const { return _filled_size; }
     T insert(T val);
     void clear();
-    ~ReservoirSampler() { }
+    virtual ~ReservoirSampler() { }
 
-    /*
-    virtual bool equals(const ReservoirSampler<T>& other) const;
-    virtual void serialize(std::ostream& stream) const;
-    static ReservoirSampler<T>*
-      deserialize(std::istream& stream);
-      */
+    bool equals(const ReservoirSampler<T>& other) const;
+    void serialize(std::ostream& stream) const;
+    static ReservoirSampler<T> deserialize(std::istream& stream);
 
     ReservoirSampler(size_t size, size_t filled_size, size_t count,
                      std::vector<T>&& reservoir):
-      _size(size),
-      _filled_size(filled_size),
-      _count(count),
-      _reservoir(std::forward<std::vector<T> >(reservoir)) { }
-
-    ReservoirSampler(ReservoirSampler<T>&& reservoir_sampler);
-
-  private:
-    ReservoirSampler(const ReservoirSampler<T>& reservoir_sampler);
+        _size(size),
+        _filled_size(filled_size),
+        _count(count),
+        _reservoir(std::move(reservoir)) { }
+    ReservoirSampler(ReservoirSampler<T>&& other):
+        _size(other._size),
+        _filled_size(other._filled_size),
+        _count(other._count),
+        _reservoir(std::move(other._reservoir)) { }
+    ReservoirSampler(const ReservoirSampler<T>& other):
+        _size(other._size),
+        _filled_size(other._filled_size),
+        _count(other._count),
+        _reservoir(other._reservoir) { }
 };
 
 
@@ -263,22 +259,18 @@ class Discretization {
     }
     const long& operator[](size_t idx) const { return _samples[idx]; }
     size_t num_samples() const { return _samples.size(); }
-    ~Discretization() { }
+    virtual ~Discretization() { }
 
-    /*
-    virtual bool equals(const Discretization& other) const;
-    virtual void serialize(std::ostream& stream) const;
-    static Discretization* deserialize(std::istream& stream);
-    */
+    bool equals(const Discretization& other) const;
+    void serialize(std::ostream& stream) const;
+    static Discretization deserialize(std::istream& stream);
 
     Discretization(std::vector<long>&& samples):
-      _samples(std::forward<std::vector<long> >(samples)) { }
-
+      _samples(std::move(samples)) { }
     Discretization(Discretization&& other):
       _samples(std::move(other._samples)) { }
-
-  private:
-    Discretization(const Discretization& discretization);
+    Discretization(const Discretization& other):
+      _samples(other._samples) { }
 };
 
 
@@ -325,7 +317,6 @@ void ReservoirSampler<T>::clear() {
   _count = 0;
 }
 
-/*
 template <typename T>
 void ReservoirSampler<T>::serialize(std::ostream& stream) const {
   Serializer<size_t>::serialize(_size, stream);
@@ -335,49 +326,33 @@ void ReservoirSampler<T>::serialize(std::ostream& stream) const {
 }
 
 template <typename T>
-ReservoirSampler<T>* ReservoirSampler<T>::deserialize(std::istream& stream) {
-  auto size(*Serializer<size_t>::deserialize(stream));
-  auto filled_size(*Serializer<size_t>::deserialize(stream));
-  auto count(*Serializer<size_t>::deserialize(stream));
+ReservoirSampler<T> ReservoirSampler<T>::deserialize(std::istream& stream) {
+  auto size(Serializer<size_t>::deserialize(stream));
+  auto filled_size(Serializer<size_t>::deserialize(stream));
+  auto count(Serializer<size_t>::deserialize(stream));
   auto reservoir(Serializer<std::vector<T> >::deserialize(stream));
-  return new ReservoirSampler<T>(
+  return ReservoirSampler<T>(
     size,
     filled_size,
     count,
-    std::move(*reservoir)
+    std::move(reservoir)
   );
 }
 
 template <typename T>
-bool ReservoirSampler<T>::equals(const ReservoirSampler<T> & other) const {
+bool ReservoirSampler<T>::equals(const ReservoirSampler<T>& other) const {
   return
     _size == other._size &&
     _filled_size == other._filled_size &&
     _count == other._count &&
     _reservoir == other._reservoir;
 }
-*/
 
-template <typename T>
-ReservoirSampler<T>::ReservoirSampler(ReservoirSampler<T>&& reservoir_sampler):
-    ReservoirSampler(reservoir_sampler._size,
-                     reservoir_sampler._filled_size,
-                     reservoir_sampler._count,
-                     std::forward<std::vector<T> >(
-                       reservoir_sampler._reservoir)) {
-  reservoir_sampler._size = 0;
-  reservoir_sampler._filled_size = 0;
-  reservoir_sampler._count = 0;
-  reservoir_sampler._reservoir.clear();
-}
-
-/*
 template <typename T>
 bool operator==(const ReservoirSampler<T>& lhs,
                 const ReservoirSampler<T>& rhs) {
   return lhs.equals(rhs);
 }
-*/
 
 
 #endif

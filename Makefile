@@ -81,20 +81,20 @@ SRC_DIR := athena
 TEST_SRC_DIR := cpp-test
 
 MAIN_SOURCES := \
-    $(SRC_DIR)/spacesaving-word2vec-train-raw.cpp \
-    $(SRC_DIR)/word2vec-train-raw.cpp \
-    $(SRC_DIR)/spacesaving-lm-train-raw.cpp \
-    $(SRC_DIR)/naive-lm-train-raw.cpp \
-    $(SRC_DIR)/lm-print.cpp \
-    $(SRC_DIR)/sgns-model-print-similarity.cpp \
+    $(SRC_DIR)/spacesaving-word2vec-train.cpp \
+    $(SRC_DIR)/spacesaving-word2vec-print.cpp \
+    $(SRC_DIR)/word2vec-train.cpp \
+    $(SRC_DIR)/word2vec-print.cpp \
+    $(SRC_DIR)/spacesaving-lm-train.cpp \
+    $(SRC_DIR)/spacesaving-lm-print.cpp \
+    $(SRC_DIR)/naive-lm-train.cpp \
+    $(SRC_DIR)/naive-lm-print.cpp \
     $(SRC_DIR)/word2vec-vocab-to-naive-lm.cpp
 MAIN_OBJECTS := $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(MAIN_SOURCES))
 MAIN_NAMES := $(MAIN_OBJECTS:.o=)
 
-GEN_SOURCES := $(SRC_DIR)/core.cpp
-
 LIB_NAME := $(BUILD_DIR)/libathena.a
-LIB_SOURCES := $(filter-out $(MAIN_SOURCES),$(filter-out $(GEN_SOURCES),$(wildcard $(SRC_DIR)/*.cpp)))
+LIB_SOURCES := $(filter-out $(MAIN_SOURCES),$(wildcard $(SRC_DIR)/*.cpp))
 LIB_OBJECTS := $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(LIB_SOURCES))
 
 TEST_SOURCES := $(wildcard $(TEST_SRC_DIR)/*_test.cpp)

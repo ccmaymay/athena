@@ -23,12 +23,12 @@
       stream << std::setprecision(SERIALIZATION_PRECISION) << \
         value << "\r\n"; \
     } \
-    static T* deserialize(std::istream& stream) { \
+    static T deserialize(std::istream& stream) { \
       T value; \
       stream >> value; \
       stream.get(); \
       stream.get(); \
-      return new T(value); \
+      return T(value); \
     } \
   };
 
@@ -59,7 +59,7 @@ struct Serializer {
   static void serialize(const T& value, std::ostream& stream) {
     value.serialize(stream);
   }
-  static T* deserialize(std::istream& stream) {
+  static T deserialize(std::istream& stream) {
     return T::deserialize(stream);
   }
 };
@@ -89,10 +89,13 @@ struct Serializer<std::pair<K,V> > {
     Serializer<K>::serialize(container.first, stream);
     Serializer<V>::serialize(container.second, stream);
   }
-  static std::pair<K,V>* deserialize(std::istream& stream) {
-    auto first(*Serializer<K>::deserialize(stream));
-    auto second(*Serializer<V>::deserialize(stream));
-    return new std::pair<K,V>(first, second);
+  static std::pair<K,V> deserialize(std::istream& stream) {
+    auto first(Serializer<K>::deserialize(stream));
+    auto second(Serializer<V>::deserialize(stream));
+    return std::pair<K,V>(
+      std::move(first),
+      std::move(second)
+    );
   }
 };
 
@@ -109,11 +112,11 @@ struct Serializer<std::string> {
       stream << container[i];
     }
   }
-  static std::string* deserialize(std::istream& stream) {
-    auto size(*Serializer<size_t>::deserialize(stream));
-    auto container(new std::string(size, 0));
+  static std::string deserialize(std::istream& stream) {
+    auto size(Serializer<size_t>::deserialize(stream));
+    std::string container(size, 0);
     for (size_t i = 0; i < size; ++i) {
-      stream >> (*container)[i];
+      stream >> container[i];
     }
     return container;
   }
@@ -134,12 +137,12 @@ struct Serializer<std::unordered_map<K,V> > {
       Serializer<std::pair<K,V> >::serialize(*it, stream);
     }
   }
-  static std::unordered_map<K,V>* deserialize(std::istream& stream) {
-    auto size(*Serializer<size_t>::deserialize(stream));
-    auto container(new std::unordered_map<K,V>());
+  static std::unordered_map<K,V> deserialize(std::istream& stream) {
+    auto size(Serializer<size_t>::deserialize(stream));
+    std::unordered_map<K,V> container;
     for (size_t i = 0; i < size; ++i) {
-      container->insert(
-        std::move(*Serializer<std::pair<K,V> >::deserialize(stream)));
+      container.insert(
+        Serializer<std::pair<K,V> >::deserialize(stream));
     }
     return container;
   }
@@ -160,12 +163,12 @@ struct Serializer<std::multimap<K,V> > {
       Serializer<std::pair<K,V> >::serialize(*it, stream);
     }
   }
-  static std::multimap<K,V>* deserialize(std::istream& stream) {
-    auto size(*Serializer<size_t>::deserialize(stream));
-    auto container(new std::multimap<K,V>());
+  static std::multimap<K,V> deserialize(std::istream& stream) {
+    auto size(Serializer<size_t>::deserialize(stream));
+    std::multimap<K,V> container;
     for (size_t i = 0; i < size; ++i) {
-      container->insert(
-        std::move(*Serializer<std::pair<K,V> >::deserialize(stream)));
+      container.insert(
+        Serializer<std::pair<K,V> >::deserialize(stream));
     }
     return container;
   }
@@ -186,12 +189,12 @@ struct Serializer<std::vector<T> > {
       Serializer<T>::serialize(*it, stream);
     }
   }
-  static std::vector<T>* deserialize(std::istream& stream) {
-    auto size(*Serializer<size_t>::deserialize(stream));
-    auto container(new std::vector<T>());
-    container->reserve(size);
+  static std::vector<T> deserialize(std::istream& stream) {
+    auto size(Serializer<size_t>::deserialize(stream));
+    std::vector<T> container;
+    container.reserve(size);
     for (size_t i = 0; i < size; ++i) {
-      container->push_back(std::move(*Serializer<T>::deserialize(stream)));
+      container.push_back(Serializer<T>::deserialize(stream));
     }
     return container;
   }
@@ -223,11 +226,11 @@ class FileSerializer {
       }
     }
 
-    T* load() const {
+    T load() const {
       std::ifstream input_file;
       input_file.open(_path.c_str());
       if (input_file) {
-        auto obj = Serializer<T>::deserialize(input_file);
+        auto obj(Serializer<T>::deserialize(input_file));
         input_file.close();
         return obj;
       } else {

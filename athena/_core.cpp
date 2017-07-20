@@ -117,9 +117,7 @@ void NaiveLanguageModel::sort() {
   truncate(_size);
 }
 
-/*
 void NaiveLanguageModel::serialize(ostream& stream) const {
-  Serializer<int>::serialize(naive_lm, stream);
   Serializer<float>::serialize(_subsample_threshold, stream);
   Serializer<size_t>::serialize(_size, stream);
   Serializer<size_t>::serialize(_total, stream);
@@ -128,35 +126,32 @@ void NaiveLanguageModel::serialize(ostream& stream) const {
   Serializer<vector<string> >::serialize(_words, stream);
 }
 
-NaiveLanguageModel* NaiveLanguageModel::deserialize(istream& stream) {
-  auto subsample_threshold(*Serializer<float>::deserialize(stream));
-  auto size(*Serializer<size_t>::deserialize(stream));
-  auto total(*Serializer<size_t>::deserialize(stream));
+NaiveLanguageModel NaiveLanguageModel::deserialize(istream& stream) {
+  auto subsample_threshold(Serializer<float>::deserialize(stream));
+  auto size(Serializer<size_t>::deserialize(stream));
+  auto total(Serializer<size_t>::deserialize(stream));
   auto counters(Serializer<vector<size_t> >::deserialize(stream));
   auto word_ids(Serializer<unordered_map<string,long> >::deserialize(stream));
   auto words(Serializer<vector<string> >::deserialize(stream));
-  return new NaiveLanguageModel(
+  return NaiveLanguageModel(
     subsample_threshold,
     size,
     total,
-    move(*counters),
-    move(*word_ids),
-    move(*words)
+    move(counters),
+    move(word_ids),
+    move(words)
   );
 }
 
-bool NaiveLanguageModel::equals(const LanguageModel& other) const {
-  const auto& cast_other(
-      dynamic_cast<const NaiveLanguageModel&>(other));
+bool NaiveLanguageModel::equals(const NaiveLanguageModel& other) const {
   return
-    near(_subsample_threshold, cast_other._subsample_threshold) &&
-    _size == cast_other._size &&
-    _total == cast_other._total &&
-    _counters == cast_other._counters &&
-    _word_ids == cast_other._word_ids &&
-    _words == cast_other._words;
+    near(_subsample_threshold, other._subsample_threshold) &&
+    _size == other._size &&
+    _total == other._total &&
+    _counters == other._counters &&
+    _word_ids == other._word_ids &&
+    _words == other._words;
 }
-*/
 
 
 //
@@ -249,9 +244,7 @@ void SpaceSavingLanguageModel::truncate(size_t max_size) {
     string("SpaceSavingLanguageModel::truncate: not implemented"));
 }
 
-/*
 void SpaceSavingLanguageModel::serialize(ostream& stream) const {
-  Serializer<int>::serialize(space_saving_lm, stream);
   Serializer<float>::serialize(_subsample_threshold, stream);
   Serializer<size_t>::serialize(_num_counters, stream);
   Serializer<size_t>::serialize(_size, stream);
@@ -264,48 +257,45 @@ void SpaceSavingLanguageModel::serialize(ostream& stream) const {
   Serializer<vector<string> >::serialize(_words, stream);
 }
 
-SpaceSavingLanguageModel*
+SpaceSavingLanguageModel
     SpaceSavingLanguageModel::deserialize(istream& stream) {
-  auto subsample_threshold(*Serializer<float>::deserialize(stream));
-  auto num_counters(*Serializer<size_t>::deserialize(stream));
-  auto size(*Serializer<size_t>::deserialize(stream));
-  auto total(*Serializer<size_t>::deserialize(stream));
-  auto min_idx(*Serializer<size_t>::deserialize(stream));
+  auto subsample_threshold(Serializer<float>::deserialize(stream));
+  auto num_counters(Serializer<size_t>::deserialize(stream));
+  auto size(Serializer<size_t>::deserialize(stream));
+  auto total(Serializer<size_t>::deserialize(stream));
+  auto min_idx(Serializer<size_t>::deserialize(stream));
   auto counters(Serializer<vector<size_t> >::deserialize(stream));
   auto word_ids(Serializer<unordered_map<string,long> >::deserialize(stream));
   auto internal_ids(Serializer<vector<long> >::deserialize(stream));
   auto external_ids(Serializer<vector<long> >::deserialize(stream));
   auto words(Serializer<vector<string> >::deserialize(stream));
-  return new SpaceSavingLanguageModel(
+  return SpaceSavingLanguageModel(
     subsample_threshold,
     num_counters,
     size,
     total,
     min_idx,
-    move(*counters),
-    move(*word_ids),
-    move(*internal_ids),
-    move(*external_ids),
-    move(*words)
+    move(counters),
+    move(word_ids),
+    move(internal_ids),
+    move(external_ids),
+    move(words)
   );
 }
 
-bool SpaceSavingLanguageModel::equals(const LanguageModel& other) const {
-  const auto& cast_other(
-      dynamic_cast<const SpaceSavingLanguageModel&>(other));
+bool SpaceSavingLanguageModel::equals(const SpaceSavingLanguageModel& other) const {
   return
-    near(_subsample_threshold, cast_other._subsample_threshold) &&
-    _num_counters == cast_other._num_counters &&
-    _size == cast_other._size &&
-    _total == cast_other._total &&
-    _min_idx == cast_other._min_idx &&
-    _counters == cast_other._counters &&
-    _word_ids == cast_other._word_ids &&
-    _internal_ids == cast_other._internal_ids &&
-    _external_ids == cast_other._external_ids &&
-    _words == cast_other._words;
+    near(_subsample_threshold, other._subsample_threshold) &&
+    _num_counters == other._num_counters &&
+    _size == other._size &&
+    _total == other._total &&
+    _min_idx == other._min_idx &&
+    _counters == other._counters &&
+    _word_ids == other._word_ids &&
+    _internal_ids == other._internal_ids &&
+    _external_ids == other._external_ids &&
+    _words == other._words;
 }
-*/
 
 void SpaceSavingLanguageModel::_update_min_idx() {
   if (_min_idx + 1 == _size) {
@@ -423,7 +413,6 @@ float* WordContextFactorization::get_context_embedding(size_t word_idx) {
   return _context_embeddings.data() + word_idx * _actual_embedding_dim;
 }
 
-/*
 void WordContextFactorization::serialize(ostream& stream) const {
   Serializer<size_t>::serialize(_vocab_dim, stream);
   Serializer<size_t>::serialize(_embedding_dim, stream);
@@ -432,19 +421,19 @@ void WordContextFactorization::serialize(ostream& stream) const {
   Serializer<AlignedVector>::serialize(_context_embeddings, stream);
 }
 
-WordContextFactorization*
+WordContextFactorization
     WordContextFactorization::deserialize(istream& stream) {
-  auto vocab_dim(*Serializer<size_t>::deserialize(stream));
-  auto embedding_dim(*Serializer<size_t>::deserialize(stream));
-  auto actual_embedding_dim(*Serializer<size_t>::deserialize(stream));
+  auto vocab_dim(Serializer<size_t>::deserialize(stream));
+  auto embedding_dim(Serializer<size_t>::deserialize(stream));
+  auto actual_embedding_dim(Serializer<size_t>::deserialize(stream));
   auto word_embeddings(Serializer<AlignedVector>::deserialize(stream));
   auto context_embeddings(Serializer<AlignedVector>::deserialize(stream));
-  return new WordContextFactorization(
+  return WordContextFactorization(
     vocab_dim,
     embedding_dim,
     actual_embedding_dim,
-    move(*word_embeddings),
-    move(*context_embeddings)
+    move(word_embeddings),
+    move(context_embeddings)
   );
 }
 
@@ -456,8 +445,6 @@ bool WordContextFactorization::equals(const WordContextFactorization& other) con
     near(_word_embeddings, other._word_embeddings) &&
     near(_context_embeddings, other._context_embeddings);
 }
-
-*/
 
 //
 // SGD
@@ -499,7 +486,6 @@ void SGD::reset(size_t dim) {
   _compute_rho(dim);
 }
 
-/*
 void SGD::serialize(ostream& stream) const {
   Serializer<size_t>::serialize(_dimension, stream);
   Serializer<float>::serialize(_tau, stream);
@@ -509,20 +495,20 @@ void SGD::serialize(ostream& stream) const {
   Serializer<vector<size_t> >::serialize(_t, stream);
 }
 
-SGD* SGD::deserialize(istream& stream) {
-  auto dimension(*Serializer<size_t>::deserialize(stream));
-  auto tau(*Serializer<float>::deserialize(stream));
-  auto kappa(*Serializer<float>::deserialize(stream));
-  auto rho_lower_bound(*Serializer<float>::deserialize(stream));
+SGD SGD::deserialize(istream& stream) {
+  auto dimension(Serializer<size_t>::deserialize(stream));
+  auto tau(Serializer<float>::deserialize(stream));
+  auto kappa(Serializer<float>::deserialize(stream));
+  auto rho_lower_bound(Serializer<float>::deserialize(stream));
   auto rho(Serializer<vector<float> >::deserialize(stream));
   auto t(Serializer<vector<size_t> >::deserialize(stream));
-  return new SGD(
+  return SGD(
     dimension,
     tau,
     kappa,
     rho_lower_bound,
-    move(*rho),
-    move(*t)
+    move(rho),
+    move(t)
   );
 }
 
@@ -535,33 +521,10 @@ bool SGD::equals(const SGD& other) const {
     near(_rho, other._rho) &&
     _t == other._t;
 }
-*/
 
 void SGD::_compute_rho(size_t dim) {
   _rho[dim] = max(_rho_lower_bound, _kappa * (1.f - (float) _t[dim] / _tau));
 }
-
-
-//
-// ContextStrategy
-//
-
-
-/*
-ContextStrategy* ContextStrategy::deserialize(istream& stream) {
-  auto derived(*Serializer<int>::deserialize(stream));
-  switch (derived) {
-    case static_ctx:
-      return StaticContextStrategy::deserialize(stream);
-    case dynamic_ctx:
-      return DynamicContextStrategy::deserialize(stream);
-    default:
-      throw runtime_error(
-        string("ContextStrategy::deserialize: invalid derived type ") +
-        to_string(derived));
-  }
-}
-*/
 
 
 //
@@ -575,24 +538,19 @@ pair<size_t,size_t> StaticContextStrategy::size(size_t avail_left,
                    min(avail_right, _symm_context));
 }
 
-/*
 void StaticContextStrategy::serialize(ostream& stream) const {
-  Serializer<int>::serialize(static_ctx, stream);
   Serializer<size_t>::serialize(_symm_context, stream);
 }
 
-StaticContextStrategy*
+StaticContextStrategy
     StaticContextStrategy::deserialize(istream& stream) {
-  auto symm_context(*Serializer<size_t>::deserialize(stream));
-  return new StaticContextStrategy(symm_context);
+  auto symm_context(Serializer<size_t>::deserialize(stream));
+  return StaticContextStrategy(symm_context);
 }
 
-bool StaticContextStrategy::equals(const ContextStrategy& other) const {
-  const auto& cast_other(
-      dynamic_cast<const StaticContextStrategy&>(other));
-  return _symm_context == cast_other._symm_context;
+bool StaticContextStrategy::equals(const StaticContextStrategy& other) const {
+  return _symm_context == other._symm_context;
 }
-*/
 
 
 //
@@ -608,21 +566,16 @@ pair<size_t,size_t> DynamicContextStrategy::size(size_t avail_left,
                    min(avail_right, ctx_size));
 }
 
-/*
 void DynamicContextStrategy::serialize(ostream& stream) const {
-  Serializer<int>::serialize(dynamic_ctx, stream);
   Serializer<size_t>::serialize(_symm_context, stream);
 }
 
-DynamicContextStrategy*
+DynamicContextStrategy
     DynamicContextStrategy::deserialize(istream& stream) {
-  auto symm_context(*Serializer<size_t>::deserialize(stream));
-  return new DynamicContextStrategy(symm_context);
+  auto symm_context(Serializer<size_t>::deserialize(stream));
+  return DynamicContextStrategy(symm_context);
 }
 
-bool DynamicContextStrategy::equals(const ContextStrategy& other) const {
-  const auto& cast_other(
-      dynamic_cast<const DynamicContextStrategy&>(other));
-  return _symm_context == cast_other._symm_context;
+bool DynamicContextStrategy::equals(const DynamicContextStrategy& other) const {
+  return _symm_context == other._symm_context;
 }
-*/

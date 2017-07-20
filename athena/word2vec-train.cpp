@@ -7,6 +7,7 @@
 #include "_serialization.h"
 
 #include <ctime>
+#include <cmath>
 #include <cstdlib>
 #include <vector>
 #include <string>
@@ -18,17 +19,17 @@
 
 #define SENTENCE_LIMIT 1000
 #define RHO_LOWER_BOUND_FACTOR 1e-4
-#define PROPAGATE_DISCARDED false
-#define PROPAGATE_RETAINED false
 #define SMOOTHING_EXPONENT 0.75
 #define SMOOTHING_OFFSET 0
-#define RESERVOIR_SIZE 100000000
+#define NEG_SAMPLING_TABLE_SIZE 100000000
 
 #define DEFAULT_SYMM_CONTEXT 5
 #define DEFAULT_NEG_SAMPLES 5
-#define DEFAULT_TAU 1.7e7
 #define DEFAULT_KAPPA 2.5e-2
 
+
+typedef SGNSTokenLearner<NaiveLanguageModel, DiscreteSamplingStrategy<NaiveLanguageModel> > SGNSTokenLearnerType;
+typedef SGNSSentenceLearner<SGNSTokenLearnerType, DynamicContextStrategy> SGNSSentenceLearnerType;
 
 using namespace std;
 
@@ -59,15 +60,9 @@ void usage(ostream& s, const string& program) {
   s << "  -c <context>\n";
   s << "     Set number of words on each side to use as context.\n";
   s << "     Default: " << DEFAULT_SYMM_CONTEXT << "\n";
-  s << "  -t <tau>\n";
-  s << "     Set learning rate iteration divisor.\n";
-  s << "     Default: " << DEFAULT_TAU << "\n";
   s << "  -k <kappa>\n";
   s << "     Set learning rate overall multiplier.\n";
   s << "     Default: " << DEFAULT_KAPPA << "\n";
-  s << "  -x <eos-symbol>\n";
-  s << "     Set explicit end-of-sentence symbol.\n";
-  s << "     Default: none (sentences delimited by newlines only)\n";
   s << "  -l <lm-path>\n";
   s << "     Load language model from file (rather than learning from data).\n";
   s << "  -h\n";
@@ -75,7 +70,7 @@ void usage(ostream& s, const string& program) {
 }
 
 int main(int argc, char **argv) {
-  string lm_path, eos_symbol;
+  string lm_path;
   size_t
     vocab_dim(DEFAULT_VOCAB_DIM),
     embedding_dim(DEFAULT_EMBEDDING_DIM),
@@ -83,14 +78,13 @@ int main(int argc, char **argv) {
     symm_context(DEFAULT_SYMM_CONTEXT);
   float
     subsample_threshold(DEFAULT_SUBSAMPLE_THRESHOLD),
-    tau(DEFAULT_TAU),
     kappa(DEFAULT_KAPPA);
 
   const string program(argv[0]);
 
   int ret = 0;
   while (ret != -1) {
-    ret = getopt(argc, argv, "v:e:s:n:c:t:k:l:x:h");
+    ret = getopt(argc, argv, "v:e:s:n:c:k:l:h");
     switch (ret) {
       case 'v':
         vocab_dim = stoull(string(optarg));
@@ -107,17 +101,11 @@ int main(int argc, char **argv) {
       case 'c':
         symm_context = stoull(string(optarg));
         break;
-      case 't':
-        tau = stof(string(optarg));
-        break;
       case 'k':
         kappa = stof(string(optarg));
         break;
       case 'l':
         lm_path = string(optarg);
-        break;
-      case 'x':
-        eos_symbol = string(optarg);
         break;
       case 'h':
         usage(cout, program);
@@ -139,29 +127,21 @@ int main(int argc, char **argv) {
   info(__func__, "seeding random number generator ...\n");
   seed_default();
 
-  shared_ptr<LanguageModel> language_model;
+  shared_ptr<NaiveLanguageModel> language_model;
 
   if (lm_path.empty()) {
     info(__func__, "initializing language model ...\n");
     language_model = make_shared<NaiveLanguageModel>(subsample_threshold);
 
     info(__func__, "loading words into vocabulary ...\n");
-    string word;
     ifstream f;
     f.open(input_path);
     stream_ready_or_throw(f);
-    while (f) {
-      const char c = f.get();
-      if (c == '\r') {
-        continue;
-      }
-      if (c == ' ' || c == '\n' || c == '\t') {
-        if (! word.empty() && word != eos_symbol) {
-          language_model->increment(word);
-          word.clear();
-        }
-      } else {
-        word.push_back(c);
+    SentenceReader reader(f, SENTENCE_LIMIT);
+    while (reader.has_next()) {
+      vector<string> sentence(reader.next());
+      for (auto it = sentence.begin(); it != sentence.end(); ++it) {
+        language_model->increment(*it);
       }
     }
     f.close();
@@ -170,7 +150,9 @@ int main(int argc, char **argv) {
     language_model->truncate(vocab_dim);
   } else {
     info(__func__, "loading language model ...\n");
-    language_model = FileSerializer<LanguageModel>(lm_path).load();
+    language_model = make_shared<NaiveLanguageModel>(move(
+      FileSerializer<NaiveLanguageModel>(lm_path).load()
+    ));
 
     info(__func__, "setting vocab dim to language model size " <<
                      language_model->size() <<
@@ -178,71 +160,80 @@ int main(int argc, char **argv) {
     vocab_dim = language_model->size();
   }
 
-  info(__func__, "initializing SGNS model ...\n");
-  auto model(make_shared<SGNSModel>(
-    make_shared<WordContextFactorization>(vocab_dim, embedding_dim),
-    make_shared<ReservoirSamplingStrategy>(
-      make_shared<ReservoirSampler<long> >(RESERVOIR_SIZE)),
-    language_model,
-    make_shared<SGD>(vocab_dim, tau, kappa, RHO_LOWER_BOUND_FACTOR * kappa),
-    make_shared<DynamicContextStrategy>(symm_context),
-    make_shared<SGNSTokenLearner>(),
-    make_shared<SGNSSentenceLearner>(neg_samples, PROPAGATE_RETAINED),
-    make_shared<SubsamplingSGNSSentenceLearner>(PROPAGATE_DISCARDED)
-  ));
-  model->token_learner->set_model(model);
-  model->sentence_learner->set_model(model);
-  model->subsampling_sentence_learner->set_model(model);
+  info(__func__, "initializing negative sampling table ...\n");
+  ExponentCountNormalizer normalizer(SMOOTHING_EXPONENT, SMOOTHING_OFFSET);
 
-  info(__func__, "initializing reservoir ...\n");
-  CountNormalizer normalizer(SMOOTHING_EXPONENT, SMOOTHING_OFFSET);
-  model->neg_sampling_strategy->reset(*language_model, normalizer);
+  info(__func__, "initializing SGNS model ...\n");
+  auto sgd(make_shared<SGD>(
+    vocab_dim,
+    language_model->total(),
+    kappa,
+    RHO_LOWER_BOUND_FACTOR * kappa));
+  SGNSSentenceLearnerType sentence_learner(
+    make_shared<SGNSTokenLearnerType>(
+      make_shared<WordContextFactorization>(vocab_dim, embedding_dim),
+      make_shared<DiscreteSamplingStrategy<NaiveLanguageModel> >(
+        make_shared<Discretization>(
+          normalizer.normalize(language_model->counts()),
+          NEG_SAMPLING_TABLE_SIZE)),
+      language_model,
+      sgd
+    ),
+    make_shared<DynamicContextStrategy>(symm_context),
+    neg_samples
+  );
 
   info(__func__, "training ...\n");
-  vector<string> sentence;
-  size_t words_seen = 0;
-  string word;
+  size_t words_seen = 0, prev_words_seen = 0;
   ifstream f;
   f.open(input_path);
   stream_ready_or_throw(f);
-  time_t start = time(NULL);
-  while (f) {
-    sentence.clear();
-    while (f) {
-      const char c = f.get();
-      if (c == '\r') {
-        continue;
-      }
-      if (c == ' ' || c == '\n' || c == '\t') {
-        if (! word.empty() && word != eos_symbol) {
-          sentence.push_back(word);
-          ++words_seen;
-          word.clear();
+  SentenceReader reader(f, SENTENCE_LIMIT);
+  time_t start = time(NULL), prev_now = time(NULL);
+  while (reader.has_next()) {
+    vector<string> sentence(reader.next());
+
+    vector<long> word_ids;
+    word_ids.reserve(sentence.size());
+    for (auto it = sentence.begin(); it != sentence.end(); ++it) {
+      long word_id = language_model->lookup(*it);
+      if (word_id >= 0) {
+        if (language_model->subsample(word_id)) {
+          word_ids.push_back(word_id);
         }
-        if (c == '\n') {
-          break;
-        }
-      } else {
-        word.push_back(c);
-      }
-      if (sentence.size() == SENTENCE_LIMIT) {
-        break;
+        ++words_seen;
       }
     }
 
-    time_t now = time(NULL);
-    if (difftime(now, start) >= 10) {
-      start = now;
-      info(__func__, "loaded sentence of " << sentence.size() <<
-        " new words (" << words_seen << " total), training ...\n");
+    sentence_learner.sentence_train(word_ids);
+
+    for (size_t input_word_pos = 0; input_word_pos < word_ids.size();
+         ++input_word_pos) {
+      sgd->step(word_ids[input_word_pos]);
     }
-    model->subsampling_sentence_learner->sentence_train(sentence);
+
+    time_t now = time(NULL);
+    if (difftime(now, prev_now) >= 5) {
+      info(__func__, "loaded " << (words_seen / 1000) << " kwords total, " <<
+          round(
+            (words_seen - prev_words_seen) / difftime(now, prev_now) / 1000
+          ) << " kwords/sec; training ...\n");
+      prev_words_seen = words_seen;
+      prev_now = now;
+    }
   }
+
+  time_t now = time(NULL);
+  info(__func__, "loaded " << (words_seen / 1000) << " kwords total, " <<
+      round(words_seen / difftime(now, start) / 1000) <<
+      " kwords/sec overall, " << difftime(now, start) << " sec\n");
+  prev_words_seen = words_seen;
+  prev_now = now;
 
   f.close();
 
   info(__func__, "saving ...\n");
-  FileSerializer<SGNSModel>(output_path).dump(*model);
+  FileSerializer<SGNSSentenceLearnerType>(output_path).dump(sentence_learner);
 
   info(__func__, "done\n");
 }

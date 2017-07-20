@@ -7,25 +7,23 @@
 #include <gmock/gmock.h>
 
 
-class MockCountNormalizer : public CountNormalizer {
+class MockCountNormalizer {
   public:
-    using CountNormalizer::CountNormalizer;
     MOCK_CONST_METHOD1(normalize, std::vector<float>
                                     (const std::vector<size_t>& counts));
 
     MOCK_CONST_METHOD1(serialize, void (std::ostream& stream));
-    MOCK_CONST_METHOD1(equals, bool (const CountNormalizer& other));
+    MOCK_CONST_METHOD1(equals, bool (const MockCountNormalizer& other));
 };
 
 
 static const long mock_reservoir_sampler_ret = 99;
 
 
-class MockLongReservoirSampler : public ReservoirSampler<long> {
+class MockLongReservoirSampler {
   public:
-    using ReservoirSampler<long>::ReservoirSampler;
     MOCK_CONST_METHOD0(sample, long ());
-    virtual const long& operator[](size_t idx) const {
+    const long& operator[](size_t idx) const {
       return mock_reservoir_sampler_ret;
     }
     MOCK_CONST_METHOD0(size, size_t ());
@@ -34,7 +32,23 @@ class MockLongReservoirSampler : public ReservoirSampler<long> {
     MOCK_METHOD0(clear, void ());
 
     MOCK_CONST_METHOD1(serialize, void (std::ostream& stream));
-    MOCK_CONST_METHOD1(equals, bool (const ReservoirSampler<long>& other));
+    MOCK_CONST_METHOD1(equals, bool (const MockLongReservoirSampler& other));
+};
+
+
+static const long mock_discretization_ret = 98;
+
+
+class MockDiscretization {
+  public:
+    MOCK_CONST_METHOD0(sample, long ());
+    const long& operator[](size_t idx) const {
+      return mock_discretization_ret;
+    }
+    MOCK_CONST_METHOD0(num_samples, size_t ());
+
+    MOCK_CONST_METHOD1(serialize, void (std::ostream& stream));
+    MOCK_CONST_METHOD1(equals, bool (const MockDiscretization& other));
 };
 
 

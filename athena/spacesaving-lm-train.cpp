@@ -4,6 +4,8 @@
 #include "_math.h"
 #include "_serialization.h"
 
+#include <ctime>
+#include <vector>
 #include <cstdlib>
 #include <string>
 #include <iostream>
@@ -11,10 +13,13 @@
 #include <unistd.h>
 
 
+#define SENTENCE_LIMIT 1000
+
+
 using namespace std;
 
 void usage(ostream& s, const string& program) {
-  s << "Train naive language model from text file.\n";
+  s << "Train Space-Saving language model from text file.\n";
   s << "\n";
   s << "Usage: " << program << " [...] <input-path> <output-path>\n";
   s << "\n";
@@ -70,34 +75,45 @@ int main(int argc, char **argv) {
   seed_default();
 
   info(__func__, "initializing model ...\n");
-  auto language_model(make_shared<NaiveLanguageModel>(subsample_threshold));
+  SpaceSavingLanguageModel language_model(vocab_dim, subsample_threshold);
 
-  info(__func__, "loading words into vocabulary ...\n");
-  string word;
+  info(__func__, "training ...\n");
+  size_t words_seen = 0, prev_words_seen = 0;
   ifstream f;
   f.open(input_path);
   stream_ready_or_throw(f);
-  while (f) {
-    const char c = f.get();
-    if (c == '\r') {
-      continue;
+  SentenceReader reader(f, SENTENCE_LIMIT);
+  time_t start = time(NULL), prev_now = time(NULL);
+  while (reader.has_next()) {
+    vector<string> sentence(reader.next());
+
+    for (auto it = sentence.begin(); it != sentence.end(); ++it) {
+      language_model.increment(*it);
+      ++words_seen;
     }
-    if (c == ' ' || c == '\n' || c == '\t' || c == '\r') {
-      if (! word.empty()) {
-        language_model->increment(word);
-        word.clear();
-      }
-    } else {
-      word.push_back(c);
+
+    time_t now = time(NULL);
+    if (difftime(now, prev_now) >= 5) {
+      info(__func__, "loaded " << (words_seen / 1000) << " kwords total, " <<
+          round(
+            (words_seen - prev_words_seen) / difftime(now, prev_now) / 1000
+          ) << " kwords/sec; training ...\n");
+      prev_words_seen = words_seen;
+      prev_now = now;
     }
   }
+
+  time_t now = time(NULL);
+  info(__func__, "loaded " << (words_seen / 1000) << " kwords total, " <<
+      round(words_seen / difftime(now, start) / 1000) <<
+      " kwords/sec overall, " << difftime(now, start) << " sec\n");
+  prev_words_seen = words_seen;
+  prev_now = now;
+
   f.close();
 
-  info(__func__, "truncating language model ...\n");
-  language_model->truncate(vocab_dim);
-
   info(__func__, "saving ...\n");
-  FileSerializer<LanguageModel>(output_path).dump(*language_model);
+  FileSerializer<SpaceSavingLanguageModel>(output_path).dump(language_model);
 
   info(__func__, "done\n");
 }

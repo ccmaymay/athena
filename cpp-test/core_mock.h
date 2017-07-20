@@ -3,11 +3,12 @@
 
 
 #include "_core.h"
+#include "math_mock.h"
 
 #include <gmock/gmock.h>
 
 
-class MockLanguageModel : public LanguageModel {
+class MockLanguageModel {
   public:
     MOCK_METHOD1(increment,
                  std::pair<long,std::string> (const std::string& word));
@@ -22,13 +23,12 @@ class MockLanguageModel : public LanguageModel {
     MOCK_METHOD1(truncate, void (size_t max_size));
 
     MOCK_CONST_METHOD1(serialize, void (std::ostream& stream));
-    MOCK_CONST_METHOD1(equals, bool (const LanguageModel& other));
+    MOCK_CONST_METHOD1(equals, bool (const MockLanguageModel& other));
 };
 
 
-class MockSGD : public SGD {
+class MockSGD {
   public:
-    using SGD::SGD;
     MOCK_METHOD1(step, void (size_t dim));
     MOCK_CONST_METHOD1(get_rho, float (size_t dim));
     MOCK_METHOD4(gradient_update, void (size_t dim, size_t n, const float *g,
@@ -39,37 +39,35 @@ class MockSGD : public SGD {
     MOCK_METHOD1(reset, void (size_t dim));
 
     MOCK_CONST_METHOD1(serialize, void (std::ostream& stream));
-    MOCK_CONST_METHOD1(equals, bool (const SGD& other));
+    MOCK_CONST_METHOD1(equals, bool (const MockSGD& other));
 
   private:
     MOCK_METHOD1(_compute_rho, void (size_t dimension));
 };
 
 
-class MockSamplingStrategy : public SamplingStrategy {
+class MockSamplingStrategy {
   public:
-    using SamplingStrategy::SamplingStrategy;
     MOCK_METHOD1(sample_idx,
-      long (const LanguageModel& language_model));
+      long (const MockLanguageModel& language_model));
     MOCK_METHOD2(step,
-      void (const LanguageModel& language_model, size_t word_idx));
+      void (const MockLanguageModel& language_model, size_t word_idx));
     MOCK_METHOD2(reset,
-      void (const LanguageModel& language_model,
-            const CountNormalizer& normalizer));
+      void (const MockLanguageModel& language_model,
+            const MockCountNormalizer& normalizer));
 
     MOCK_CONST_METHOD1(serialize, void (std::ostream& stream));
-    MOCK_CONST_METHOD1(equals, bool (const SamplingStrategy& other));
+    MOCK_CONST_METHOD1(equals, bool (const MockSamplingStrategy& other));
 };
 
 
-class MockContextStrategy : public ContextStrategy {
+class MockContextStrategy {
   public:
-    using ContextStrategy::ContextStrategy;
     MOCK_CONST_METHOD2(size,
       std::pair<size_t,size_t> (size_t avail_left, size_t avail_right));
 
     MOCK_CONST_METHOD1(serialize, void (std::ostream& stream));
-    MOCK_CONST_METHOD1(equals, bool (const ContextStrategy& other));
+    MOCK_CONST_METHOD1(equals, bool (const MockContextStrategy& other));
 };
 
 

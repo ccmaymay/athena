@@ -19,30 +19,21 @@ class SGNSMockSGDTokenLearnerTest: public ::testing::Test {
   protected:
     std::shared_ptr<MockSGD> sgd;
     std::shared_ptr<MockSamplingStrategy> neg_sampling_strategy;
-    std::shared_ptr<MockContextStrategy> ctx_strategy;
-    std::shared_ptr<SGNSTokenLearner> token_learner;
+    std::shared_ptr<SGNSTokenLearner<MockLanguageModel, MockSamplingStrategy, MockSGD> > token_learner;
     std::shared_ptr<MockLanguageModel> lm;
     std::shared_ptr<WordContextFactorization> factorization;
-    std::shared_ptr<SGNSModel> model;
 
     virtual void SetUp() {
-      sgd = std::make_shared<MockSGD>(3, 2, 0.5, 0.1);
+      sgd = std::make_shared<MockSGD>();
       lm = std::make_shared<MockLanguageModel>();
       EXPECT_CALL(*lm, size()).WillRepeatedly(Return(3));
       factorization = std::make_shared<WordContextFactorization>(3, 2);
       neg_sampling_strategy = std::make_shared<MockSamplingStrategy>();
-      ctx_strategy = std::make_shared<MockContextStrategy>();
-      token_learner = std::make_shared<SGNSTokenLearner>();
-      model = std::make_shared<SGNSModel>(
+      token_learner = std::make_shared<SGNSTokenLearner<MockLanguageModel, MockSamplingStrategy, MockSGD> >(
         factorization,
         neg_sampling_strategy,
         lm,
-        sgd,
-        ctx_strategy,
-        token_learner,
-        std::shared_ptr<SGNSSentenceLearner>(),
-        std::shared_ptr<SubsamplingSGNSSentenceLearner>());
-      token_learner->set_model(model);
+        sgd);
 
       factorization->get_word_embedding(0)[0] = 1;
       factorization->get_word_embedding(0)[1] = -2;
@@ -70,11 +61,9 @@ class SGNSTokenLearnerTest: public ::testing::Test {
   protected:
     std::shared_ptr<SGD> sgd;
     std::shared_ptr<MockSamplingStrategy> neg_sampling_strategy;
-    std::shared_ptr<MockContextStrategy> ctx_strategy;
-    std::shared_ptr<SGNSTokenLearner> token_learner;
+    std::shared_ptr<SGNSTokenLearner<MockLanguageModel, MockSamplingStrategy> > token_learner;
     std::shared_ptr<MockLanguageModel> lm;
     std::shared_ptr<WordContextFactorization> factorization;
-    std::shared_ptr<SGNSModel> model;
 
     virtual void SetUp() {
       sgd = std::make_shared<SGD>(3, 2, 0.5, 0.1);
@@ -82,18 +71,54 @@ class SGNSTokenLearnerTest: public ::testing::Test {
       EXPECT_CALL(*lm, size()).WillRepeatedly(Return(3));
       factorization = std::make_shared<WordContextFactorization>(3, 2);
       neg_sampling_strategy = std::make_shared<MockSamplingStrategy>();
-      ctx_strategy = std::make_shared<MockContextStrategy>();
-      token_learner = std::make_shared<SGNSTokenLearner>();
-      model = std::make_shared<SGNSModel>(
+      token_learner = std::make_shared<SGNSTokenLearner<MockLanguageModel, MockSamplingStrategy> >(
         factorization,
         neg_sampling_strategy,
         lm,
-        sgd,
-        ctx_strategy,
-        token_learner,
-        std::shared_ptr<SGNSSentenceLearner>(),
-        std::shared_ptr<SubsamplingSGNSSentenceLearner>());
-      token_learner->set_model(model);
+        sgd);
+
+      factorization->get_word_embedding(0)[0] = .1;
+      factorization->get_word_embedding(0)[1] = -.2;
+
+      factorization->get_word_embedding(1)[0] = -.3;
+      factorization->get_word_embedding(1)[1] = .2;
+
+      factorization->get_word_embedding(2)[0] = .4;
+      factorization->get_word_embedding(2)[1] = 0;
+
+      factorization->get_context_embedding(0)[0] = .4;
+      factorization->get_context_embedding(0)[1] = 0;
+
+      factorization->get_context_embedding(1)[0] = -.3;
+      factorization->get_context_embedding(1)[1] = .2;
+
+      factorization->get_context_embedding(2)[0] = .1;
+      factorization->get_context_embedding(2)[1] = -.2;
+    }
+
+    virtual void TearDown() { }
+};
+
+class SGNSTokenLearnerSerializationTest: public ::testing::Test {
+  protected:
+    std::shared_ptr<SGD> sgd;
+    std::shared_ptr<EmpiricalSamplingStrategy<NaiveLanguageModel> > neg_sampling_strategy;
+    std::shared_ptr<SGNSTokenLearner<NaiveLanguageModel, EmpiricalSamplingStrategy<NaiveLanguageModel> > > token_learner;
+    std::shared_ptr<NaiveLanguageModel> lm;
+    std::shared_ptr<WordContextFactorization> factorization;
+    std::shared_ptr<ExponentCountNormalizer> count_normalizer;
+
+    virtual void SetUp() {
+      sgd = std::make_shared<SGD>(19, 23, 0.5, 0.1);
+      lm = std::make_shared<NaiveLanguageModel>();
+      factorization = std::make_shared<WordContextFactorization>(3, 2);
+      count_normalizer = std::make_shared<ExponentCountNormalizer>();
+      neg_sampling_strategy = std::make_shared<EmpiricalSamplingStrategy<NaiveLanguageModel> >(count_normalizer, 7, 11);
+      token_learner = std::make_shared<SGNSTokenLearner<NaiveLanguageModel, EmpiricalSamplingStrategy<NaiveLanguageModel> > >(
+        factorization,
+        neg_sampling_strategy,
+        lm,
+        sgd);
 
       factorization->get_word_embedding(0)[0] = .1;
       factorization->get_word_embedding(0)[1] = -.2;
@@ -119,171 +144,61 @@ class SGNSTokenLearnerTest: public ::testing::Test {
 
 class SGNSSentenceLearnerTest: public ::testing::Test {
   protected:
-    std::shared_ptr<MockSGD> sgd;
-    std::shared_ptr<MockSamplingStrategy> neg_sampling_strategy;
     std::shared_ptr<MockContextStrategy> ctx_strategy;
     std::shared_ptr<MockSGNSTokenLearner> token_learner;
-    std::shared_ptr<SGNSSentenceLearner> sentence_learner;
-    std::shared_ptr<MockLanguageModel> lm;
-    std::shared_ptr<WordContextFactorization> factorization;
-    std::shared_ptr<SGNSModel> model;
+    std::shared_ptr<SGNSSentenceLearner<MockSGNSTokenLearner, MockContextStrategy> > sentence_learner;
 
     virtual void SetUp() {
-      sgd = std::make_shared<MockSGD>(3, 2, 0.5, 0.1);
-      lm = std::make_shared<MockLanguageModel>();
-      EXPECT_CALL(*lm, size()).WillRepeatedly(Return(3));
-      factorization = std::make_shared<WordContextFactorization>(3, 2);
-      neg_sampling_strategy = std::make_shared<MockSamplingStrategy>();
       ctx_strategy = std::make_shared<MockContextStrategy>();
       token_learner = std::make_shared<MockSGNSTokenLearner>();
-      sentence_learner = std::make_shared<SGNSSentenceLearner>(5, true);
-      model = std::make_shared<SGNSModel>(
-        factorization,
-        neg_sampling_strategy,
-        lm,
-        sgd,
-        ctx_strategy,
-        token_learner,
-        sentence_learner,
-        std::shared_ptr<SubsamplingSGNSSentenceLearner>());
-      sentence_learner->set_model(model);
-
-      factorization->get_word_embedding(0)[0] = 1;
-      factorization->get_word_embedding(0)[1] = -2;
-
-      factorization->get_word_embedding(1)[0] = -3;
-      factorization->get_word_embedding(1)[1] = 2;
-
-      factorization->get_word_embedding(2)[0] = 4;
-      factorization->get_word_embedding(2)[1] = 0;
-
-      factorization->get_context_embedding(0)[0] = 4;
-      factorization->get_context_embedding(0)[1] = 0;
-
-      factorization->get_context_embedding(1)[0] = -3;
-      factorization->get_context_embedding(1)[1] = 2;
-
-      factorization->get_context_embedding(2)[0] = 1;
-      factorization->get_context_embedding(2)[1] = -2;
+      sentence_learner = std::make_shared<SGNSSentenceLearner<MockSGNSTokenLearner, MockContextStrategy> >(token_learner, ctx_strategy, 5);
     }
 
     virtual void TearDown() { }
 };
 
-class NonPropagatingSubsamplingSGNSSentenceLearnerTest: public ::testing::Test {
-  protected:
-    std::shared_ptr<MockSGD> sgd;
-    std::shared_ptr<MockSamplingStrategy> neg_sampling_strategy;
-    std::shared_ptr<MockContextStrategy> ctx_strategy;
-    std::shared_ptr<MockSGNSTokenLearner> token_learner;
-    std::shared_ptr<MockSGNSSentenceLearner> sentence_learner;
-    std::shared_ptr<SubsamplingSGNSSentenceLearner>
-      subsampling_sentence_learner;
-    std::shared_ptr<MockLanguageModel> lm;
-    std::shared_ptr<WordContextFactorization> factorization;
-    std::shared_ptr<SGNSModel> model;
-
-    virtual void SetUp() {
-      sgd = std::make_shared<MockSGD>(3, 2, 0.5, 0.1);
-      lm = std::make_shared<MockLanguageModel>();
-      EXPECT_CALL(*lm, size()).WillRepeatedly(Return(3));
-      factorization = std::make_shared<WordContextFactorization>(3, 2);
-      neg_sampling_strategy = std::make_shared<MockSamplingStrategy>();
-      ctx_strategy = std::make_shared<MockContextStrategy>();
-      token_learner = std::make_shared<MockSGNSTokenLearner>();
-      sentence_learner = std::make_shared<MockSGNSSentenceLearner>();
-      subsampling_sentence_learner = std::make_shared<SubsamplingSGNSSentenceLearner>(false);
-      model = std::make_shared<SGNSModel>(
-        factorization,
-        neg_sampling_strategy,
-        lm,
-        sgd,
-        ctx_strategy,
-        token_learner,
-        sentence_learner,
-        subsampling_sentence_learner);
-      subsampling_sentence_learner->set_model(model);
-    }
-
-    virtual void TearDown() { }
-};
-
-class SubsamplingSGNSSentenceLearnerTest: public ::testing::Test {
-  protected:
-    std::shared_ptr<MockSGD> sgd;
-    std::shared_ptr<MockSamplingStrategy> neg_sampling_strategy;
-    std::shared_ptr<MockContextStrategy> ctx_strategy;
-    std::shared_ptr<MockSGNSTokenLearner> token_learner;
-    std::shared_ptr<MockSGNSSentenceLearner> sentence_learner;
-    std::shared_ptr<SubsamplingSGNSSentenceLearner>
-      subsampling_sentence_learner;
-    std::shared_ptr<MockLanguageModel> lm;
-    std::shared_ptr<WordContextFactorization> factorization;
-    std::shared_ptr<SGNSModel> model;
-
-    virtual void SetUp() {
-      sgd = std::make_shared<MockSGD>(3, 2, 0.5, 0.1);
-      lm = std::make_shared<MockLanguageModel>();
-      EXPECT_CALL(*lm, size()).WillRepeatedly(Return(3));
-      factorization = std::make_shared<WordContextFactorization>(3, 2);
-      neg_sampling_strategy = std::make_shared<MockSamplingStrategy>();
-      ctx_strategy = std::make_shared<MockContextStrategy>();
-      token_learner = std::make_shared<MockSGNSTokenLearner>();
-      sentence_learner = std::make_shared<MockSGNSSentenceLearner>();
-      subsampling_sentence_learner = std::make_shared<SubsamplingSGNSSentenceLearner>(true);
-      model = std::make_shared<SGNSModel>(
-        factorization,
-        neg_sampling_strategy,
-        lm,
-        sgd,
-        ctx_strategy,
-        token_learner,
-        sentence_learner,
-        subsampling_sentence_learner);
-      subsampling_sentence_learner->set_model(model);
-    }
-
-    virtual void TearDown() { }
-};
-
-class SGNSModelTest: public ::testing::Test {
+class SGNSSentenceLearnerSerializationTest: public ::testing::Test {
   protected:
     std::shared_ptr<SGD> sgd;
-    std::shared_ptr<ReservoirSamplingStrategy> neg_sampling_strategy;
-    std::shared_ptr<ReservoirSampler<long> > reservoir_sampler;
+    std::shared_ptr<EmpiricalSamplingStrategy<NaiveLanguageModel> > neg_sampling_strategy;
     std::shared_ptr<DynamicContextStrategy> ctx_strategy;
-    std::shared_ptr<SGNSTokenLearner> token_learner;
-    std::shared_ptr<SGNSSentenceLearner> sentence_learner;
-    std::shared_ptr<SubsamplingSGNSSentenceLearner>
-      subsampling_sentence_learner;
-    std::shared_ptr<SpaceSavingLanguageModel> lm;
+    std::shared_ptr<SGNSTokenLearner<NaiveLanguageModel, EmpiricalSamplingStrategy<NaiveLanguageModel> > > token_learner;
+    std::shared_ptr<NaiveLanguageModel> lm;
     std::shared_ptr<WordContextFactorization> factorization;
-    std::shared_ptr<SGNSModel> model;
+    std::shared_ptr<ExponentCountNormalizer> count_normalizer;
+    std::shared_ptr<SGNSSentenceLearner<SGNSTokenLearner<NaiveLanguageModel, EmpiricalSamplingStrategy<NaiveLanguageModel> > > > sentence_learner;
 
     virtual void SetUp() {
-      sgd = std::make_shared<SGD>(3, 2, 0.5, 0.1);
-      lm = std::make_shared<SpaceSavingLanguageModel>();
+      sgd = std::make_shared<SGD>(19, 23, 0.5, 0.1);
+      lm = std::make_shared<NaiveLanguageModel>();
       factorization = std::make_shared<WordContextFactorization>(3, 2);
-      reservoir_sampler = std::make_shared<ReservoirSampler<long> >(7);
-      neg_sampling_strategy =
-        std::make_shared<ReservoirSamplingStrategy>(reservoir_sampler);
-      ctx_strategy = std::make_shared<DynamicContextStrategy>(3);
-      token_learner = std::make_shared<SGNSTokenLearner>();
-      sentence_learner = std::make_shared<SGNSSentenceLearner>(5, true);
-      subsampling_sentence_learner =
-        std::make_shared<SubsamplingSGNSSentenceLearner>(true);
-      model = std::make_shared<SGNSModel>(
+      count_normalizer = std::make_shared<ExponentCountNormalizer>();
+      neg_sampling_strategy = std::make_shared<EmpiricalSamplingStrategy<NaiveLanguageModel> >(count_normalizer, 7, 11);
+      ctx_strategy = std::make_shared<DynamicContextStrategy>(13);
+      token_learner = std::make_shared<SGNSTokenLearner<NaiveLanguageModel, EmpiricalSamplingStrategy<NaiveLanguageModel> > >(
         factorization,
         neg_sampling_strategy,
         lm,
-        sgd,
-        ctx_strategy,
-        token_learner,
-        sentence_learner,
-        subsampling_sentence_learner);
-      token_learner->set_model(model);
-      sentence_learner->set_model(model);
-      subsampling_sentence_learner->set_model(model);
+        sgd);
+      sentence_learner = std::make_shared<SGNSSentenceLearner<SGNSTokenLearner<NaiveLanguageModel, EmpiricalSamplingStrategy<NaiveLanguageModel> > > >(token_learner, ctx_strategy, 5);
+
+      factorization->get_word_embedding(0)[0] = .1;
+      factorization->get_word_embedding(0)[1] = -.2;
+
+      factorization->get_word_embedding(1)[0] = -.3;
+      factorization->get_word_embedding(1)[1] = .2;
+
+      factorization->get_word_embedding(2)[0] = .4;
+      factorization->get_word_embedding(2)[1] = 0;
+
+      factorization->get_context_embedding(0)[0] = .4;
+      factorization->get_context_embedding(0)[1] = 0;
+
+      factorization->get_context_embedding(1)[0] = -.3;
+      factorization->get_context_embedding(1)[1] = .2;
+
+      factorization->get_context_embedding(2)[0] = .1;
+      factorization->get_context_embedding(2)[1] = -.2;
     }
 
     virtual void TearDown() { }

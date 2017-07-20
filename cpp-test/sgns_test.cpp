@@ -321,108 +321,49 @@ TEST_F(SGNSTokenLearnerTest, find_context_nearest_neighbor_idx_left0_right2) {
   EXPECT_EQ(0, token_learner->find_context_nearest_neighbor_idx(0, 2, context5));
 }
 
-TEST_F(SGNSTokenLearnerTest, serialization_fixed_point) {
+TEST_F(SGNSTokenLearnerSerializationTest, serialization_fixed_point) {
   stringstream ostream;
   token_learner->serialize(ostream);
   ostream.flush();
 
   stringstream istream(ostream.str());
-  auto from_stream(SGNSTokenLearner::deserialize(istream));
+  auto from_stream(SGNSTokenLearner<NaiveLanguageModel, EmpiricalSamplingStrategy<NaiveLanguageModel> >::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
-  from_stream->set_model(model);
 
-  EXPECT_TRUE(token_learner->equals(*from_stream));
-}
-
-TEST_F(SGNSSentenceLearnerTest, increment) {
-  InSequence in_sequence;
-
-  EXPECT_CALL(*lm, increment("foo")).
-    WillOnce(Return(make_pair(-1L, string())));
-  EXPECT_CALL(*lm, lookup("foo")).WillOnce(Return(7));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 7));
-  sentence_learner->increment(string("foo"));
-
-  EXPECT_CALL(*lm, increment("bbq")).
-    WillOnce(Return(make_pair(2L, string("baz"))));
-  EXPECT_CALL(*token_learner, reset_word(2));
-  EXPECT_CALL(*lm, lookup("bbq")).WillOnce(Return(4));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 4));
-  sentence_learner->increment(string("bbq"));
-
-  EXPECT_CALL(*lm, increment("baz")).
-    WillOnce(Return(make_pair(2L, string("bbq"))));
-  EXPECT_CALL(*token_learner, reset_word(2));
-  EXPECT_CALL(*lm, lookup("baz")).WillOnce(Return(42));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 42));
-  sentence_learner->increment(string("baz"));
-
-  EXPECT_CALL(*lm, increment("bar")).
-    WillOnce(Return(make_pair(1L, string("baz"))));
-  EXPECT_CALL(*token_learner, reset_word(1));
-  EXPECT_CALL(*lm, lookup("bar")).WillOnce(Return(2));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 2));
-  sentence_learner->increment(string("bar"));
+  EXPECT_TRUE(token_learner->equals(from_stream));
 }
 
 TEST_F(SGNSSentenceLearnerTest, sentence_train_zero) {
-  vector<string> words;
-
-  InSequence in_sequence;
+  vector<long> words;
 
   EXPECT_CALL(*ctx_strategy, size(_, _)).Times(0);
-  EXPECT_CALL(*lm, increment(_)).Times(0);
-  EXPECT_CALL(*lm, lookup(_)).Times(0);
   EXPECT_CALL(*token_learner, reset_word(_)).Times(0);
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), _)).Times(0);
   EXPECT_CALL(*token_learner, token_train(_, _, _)).Times(0);
-  EXPECT_CALL(*sgd, step(_)).Times(0);
 
   sentence_learner->sentence_train(words);
 }
 
 TEST_F(SGNSSentenceLearnerTest, sentence_train_one) {
-  vector<string> words;
-  words.push_back(string("foo"));
+  vector<long> words;
+  words.push_back(2L);
 
   InSequence in_sequence;
-
-  EXPECT_CALL(*lm, increment("foo")).WillOnce(Return(make_pair(-1L, string())));
-  EXPECT_CALL(*lm, lookup("foo")).WillOnce(Return(2L));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 2));
-
-  EXPECT_CALL(*lm, lookup("foo")).WillOnce(Return(2L));
 
   EXPECT_CALL(*ctx_strategy, size(0, 0)).
     WillOnce(Return(make_pair(size_t(0), size_t(0))));
   EXPECT_CALL(*token_learner, reset_word(_)).Times(0);
   EXPECT_CALL(*token_learner, token_train(_, _, _)).Times(0);
-  EXPECT_CALL(*sgd, step(_)).Times(0);
 
   sentence_learner->sentence_train(words);
 }
 
 TEST_F(SGNSSentenceLearnerTest, sentence_train_empty_context) {
-  vector<string> words;
-  words.push_back(string("foo"));
-  words.push_back(string("bbq"));
-  words.push_back(string("baz"));
+  vector<long> words;
+  words.push_back(0L);
+  words.push_back(2L);
+  words.push_back(1L);
 
   InSequence in_sequence;
-
-  EXPECT_CALL(*lm, increment("foo")).WillOnce(Return(make_pair(-1L, string())));
-  EXPECT_CALL(*lm, lookup("foo")).WillOnce(Return(2L));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 2));
-  EXPECT_CALL(*lm, increment("bbq")).WillOnce(Return(make_pair(-1L, string())));
-  EXPECT_CALL(*lm, lookup("bbq")).WillOnce(Return(0L));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 0));
-  EXPECT_CALL(*lm, increment("baz")).WillOnce(Return(make_pair(-1L, string())));
-  EXPECT_CALL(*lm, lookup("baz")).WillOnce(Return(1L));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 1));
-
-  EXPECT_CALL(*lm, lookup("foo")).WillOnce(Return(0));
-  EXPECT_CALL(*lm, lookup("bbq")).WillOnce(Return(2));
-  EXPECT_CALL(*lm, lookup("baz")).WillOnce(Return(1));
 
   EXPECT_CALL(*ctx_strategy, size(0, 2)).
     WillOnce(Return(make_pair(size_t(0), size_t(0))));
@@ -432,145 +373,43 @@ TEST_F(SGNSSentenceLearnerTest, sentence_train_empty_context) {
     WillOnce(Return(make_pair(size_t(0), size_t(0))));
   EXPECT_CALL(*token_learner, reset_word(_)).Times(0);
   EXPECT_CALL(*token_learner, token_train(_, _, _)).Times(0);
-  EXPECT_CALL(*sgd, step(_)).Times(0);
 
   sentence_learner->sentence_train(words);
 }
 
 TEST_F(SGNSSentenceLearnerTest, sentence_train_short) {
-  vector<string> words;
-  words.push_back(string("foo"));
-  words.push_back(string("bbq"));
-  words.push_back(string("baz"));
+  vector<long> words;
+  words.push_back(0L);
+  words.push_back(2L);
+  words.push_back(1L);
 
   InSequence in_sequence;
-
-  EXPECT_CALL(*lm, increment("foo")).WillOnce(Return(make_pair(-1L, string())));
-  EXPECT_CALL(*lm, lookup("foo")).WillOnce(Return(2L));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 2));
-  EXPECT_CALL(*lm, increment("bbq")).WillOnce(Return(make_pair(-1L, string())));
-  EXPECT_CALL(*lm, lookup("bbq")).WillOnce(Return(0L));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 0));
-  EXPECT_CALL(*lm, increment("baz")).WillOnce(Return(make_pair(-1L, string())));
-  EXPECT_CALL(*lm, lookup("baz")).WillOnce(Return(1L));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 1));
-
-  EXPECT_CALL(*lm, lookup("foo")).WillOnce(Return(0));
-  EXPECT_CALL(*lm, lookup("bbq")).WillOnce(Return(2));
-  EXPECT_CALL(*lm, lookup("baz")).WillOnce(Return(1));
 
   EXPECT_CALL(*ctx_strategy, size(0, 2)).
     WillOnce(Return(make_pair(size_t(0), size_t(2))));
   EXPECT_CALL(*token_learner, token_train(0, 2, 5));
   EXPECT_CALL(*token_learner, token_train(0, 1, 5));
-  EXPECT_CALL(*sgd, step(0));
   EXPECT_CALL(*ctx_strategy, size(1, 1)).
     WillOnce(Return(make_pair(size_t(1), size_t(1))));
   EXPECT_CALL(*token_learner, token_train(2, 0, 5));
   EXPECT_CALL(*token_learner, token_train(2, 1, 5));
-  EXPECT_CALL(*sgd, step(2));
   EXPECT_CALL(*ctx_strategy, size(2, 0)).
     WillOnce(Return(make_pair(size_t(2), size_t(0))));
   EXPECT_CALL(*token_learner, token_train(1, 0, 5));
   EXPECT_CALL(*token_learner, token_train(1, 2, 5));
-  EXPECT_CALL(*sgd, step(1));
 
   sentence_learner->sentence_train(words);
 }
 
-TEST_F(SGNSSentenceLearnerTest, sentence_train_lm_ejected) {
-  vector<string> words;
-  words.push_back(string("foo"));
-  words.push_back(string("bbq"));
-  words.push_back(string("baz"));
-  words.push_back(string("bar"));
+TEST_F(SGNSSentenceLearnerTest, sentence_train_many) {
+  vector<long> words;
+  words.push_back(2L);
+  words.push_back(1L);
+  words.push_back(1L);
+  words.push_back(0L);
+  words.push_back(0L);
 
   InSequence in_sequence;
-
-  EXPECT_CALL(*lm, increment("foo")).WillOnce(Return(make_pair(-1L, string())));
-  EXPECT_CALL(*lm, lookup("foo")).WillOnce(Return(2L));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 2));
-  EXPECT_CALL(*lm, increment("bbq")).WillOnce(Return(make_pair(2L, string("baz"))));
-  EXPECT_CALL(*token_learner, reset_word(2));
-  EXPECT_CALL(*lm, lookup("bbq")).WillOnce(Return(0L));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 0));
-  EXPECT_CALL(*lm, increment("baz")).WillOnce(Return(make_pair(2L, string("bbq"))));
-  EXPECT_CALL(*token_learner, reset_word(2));
-  EXPECT_CALL(*lm, lookup("baz")).WillOnce(Return(1L));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 1));
-  EXPECT_CALL(*lm, increment("bar")).WillOnce(Return(make_pair(1L, string("baz"))));
-  EXPECT_CALL(*token_learner, reset_word(1));
-  EXPECT_CALL(*lm, lookup("bar")).WillOnce(Return(1L));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 1));
-
-  EXPECT_CALL(*lm, lookup("foo")).WillOnce(Return(0));
-  EXPECT_CALL(*lm, lookup("bbq")).WillOnce(Return(-1));
-  EXPECT_CALL(*lm, lookup("baz")).WillOnce(Return(2));
-  EXPECT_CALL(*lm, lookup("bar")).WillOnce(Return(1));
-
-  EXPECT_CALL(*ctx_strategy, size(0, 2)).
-    WillOnce(Return(make_pair(size_t(0), size_t(2))));
-  EXPECT_CALL(*token_learner, token_train(0, 2, 5));
-  EXPECT_CALL(*token_learner, token_train(0, 1, 5));
-  EXPECT_CALL(*sgd, step(0));
-  EXPECT_CALL(*ctx_strategy, size(1, 1)).
-    WillOnce(Return(make_pair(size_t(1), size_t(1))));
-  EXPECT_CALL(*token_learner, token_train(2, 0, 5));
-  EXPECT_CALL(*token_learner, token_train(2, 1, 5));
-  EXPECT_CALL(*sgd, step(2));
-  EXPECT_CALL(*ctx_strategy, size(2, 0)).
-    WillOnce(Return(make_pair(size_t(2), size_t(0))));
-  EXPECT_CALL(*token_learner, token_train(1, 0, 5));
-  EXPECT_CALL(*token_learner, token_train(1, 2, 5));
-  EXPECT_CALL(*sgd, step(1));
-
-  sentence_learner->sentence_train(words);
-}
-
-TEST_F(SGNSSentenceLearnerTest, sentence_train_lm_many_tokens) {
-  vector<string> words;
-  words.push_back(string("bbq"));
-  words.push_back(string("baz"));
-  words.push_back(string("bar"));
-  words.push_back(string("bar"));
-  words.push_back(string("foo"));
-  words.push_back(string("foo"));
-
-  InSequence in_sequence;
-
-  EXPECT_CALL(*lm, increment("bbq")).
-    WillOnce(Return(make_pair(2L, string("baz"))));
-  EXPECT_CALL(*token_learner, reset_word(2));
-  EXPECT_CALL(*lm, lookup("bbq")).WillOnce(Return(7));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 7));
-  EXPECT_CALL(*lm, increment("baz")).
-    WillOnce(Return(make_pair(2L, string("bbq"))));
-  EXPECT_CALL(*token_learner, reset_word(2));
-  EXPECT_CALL(*lm, lookup("baz")).WillOnce(Return(7));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 7));
-  EXPECT_CALL(*lm, increment("bar")).
-    WillOnce(Return(make_pair(-1L, string())));
-  EXPECT_CALL(*lm, lookup("bar")).WillOnce(Return(7));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 7));
-  EXPECT_CALL(*lm, increment("bar")).
-    WillOnce(Return(make_pair(-1L, string())));
-  EXPECT_CALL(*lm, lookup("bar")).WillOnce(Return(7));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 7));
-  EXPECT_CALL(*lm, increment("foo")).
-    WillOnce(Return(make_pair(-1L, string())));
-  EXPECT_CALL(*lm, lookup("foo")).WillOnce(Return(7));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 7));
-  EXPECT_CALL(*lm, increment("foo")).
-    WillOnce(Return(make_pair(-1L, string())));
-  EXPECT_CALL(*lm, lookup("foo")).WillOnce(Return(7));
-  EXPECT_CALL(*neg_sampling_strategy, step(Ref(*lm), 7));
-
-  EXPECT_CALL(*lm, lookup("bbq")).WillOnce(Return(-1));
-  EXPECT_CALL(*lm, lookup("baz")).WillOnce(Return(2));
-  EXPECT_CALL(*lm, lookup("bar")).WillOnce(Return(1)).
-                                  WillOnce(Return(1));
-  EXPECT_CALL(*lm, lookup("foo")).WillOnce(Return(0)).
-                                  WillOnce(Return(0));
 
   EXPECT_CALL(*ctx_strategy, size(0, 4)).
     WillOnce(Return(make_pair(size_t(0), size_t(0))));
@@ -579,13 +418,11 @@ TEST_F(SGNSSentenceLearnerTest, sentence_train_lm_many_tokens) {
   EXPECT_CALL(*token_learner, token_train(1, 2, 5));
   EXPECT_CALL(*token_learner, token_train(1, 1, 5));
   EXPECT_CALL(*token_learner, token_train(1, 0, 5));
-  EXPECT_CALL(*sgd, step(1));
   EXPECT_CALL(*ctx_strategy, size(2, 2)).
     WillOnce(Return(make_pair(size_t(1), size_t(2))));
   EXPECT_CALL(*token_learner, token_train(1, 1, 5));
   EXPECT_CALL(*token_learner, token_train(1, 0, 5));
   EXPECT_CALL(*token_learner, token_train(1, 0, 5));
-  EXPECT_CALL(*sgd, step(1));
   EXPECT_CALL(*ctx_strategy, size(3, 1)).
     WillOnce(Return(make_pair(size_t(0), size_t(0))));
   EXPECT_CALL(*ctx_strategy, size(4, 0)).
@@ -594,108 +431,14 @@ TEST_F(SGNSSentenceLearnerTest, sentence_train_lm_many_tokens) {
   sentence_learner->sentence_train(words);
 }
 
-TEST_F(SGNSSentenceLearnerTest, serialization_fixed_point) {
+TEST_F(SGNSSentenceLearnerSerializationTest, serialization_fixed_point) {
   stringstream ostream;
   sentence_learner->serialize(ostream);
   ostream.flush();
 
   stringstream istream(ostream.str());
-  auto from_stream(SGNSSentenceLearner::deserialize(istream));
-  ASSERT_EQ(EOF, istream.peek());
-  from_stream->set_model(model);
-
-  EXPECT_TRUE(sentence_learner->equals(*from_stream));
-}
-
-TEST_F(NonPropagatingSubsamplingSGNSSentenceLearnerTest, sentence_train) {
-  vector<string> words;
-  words.push_back(string("bbq"));
-  words.push_back(string("baz"));
-  words.push_back(string("bar"));
-  words.push_back(string("bar"));
-  words.push_back(string("bbq"));
-  words.push_back(string("foo"));
-
-  InSequence in_sequence;
-
-  EXPECT_CALL(*lm, lookup("bbq")).WillOnce(Return(2));
-  EXPECT_CALL(*lm, subsample(2)).WillOnce(Return(true));
-  EXPECT_CALL(*lm, lookup("baz")).WillOnce(Return(-1));
-  EXPECT_CALL(*lm, lookup("bar")).WillOnce(Return(1));
-  EXPECT_CALL(*lm, subsample(1)).WillOnce(Return(false));
-  EXPECT_CALL(*lm, lookup("bar")).WillOnce(Return(1));
-  EXPECT_CALL(*lm, subsample(1)).WillOnce(Return(false));
-  EXPECT_CALL(*lm, lookup("bbq")).WillOnce(Return(0));
-  EXPECT_CALL(*lm, subsample(0)).WillOnce(Return(true));
-  EXPECT_CALL(*lm, lookup("foo")).WillOnce(Return(-1));
-
-  vector<string> expected_subsampled_words;
-  expected_subsampled_words.push_back(string("bbq"));
-  expected_subsampled_words.push_back(string("baz"));
-  expected_subsampled_words.push_back(string("bbq"));
-  expected_subsampled_words.push_back(string("foo"));
-
-  EXPECT_CALL(*sentence_learner, sentence_train(expected_subsampled_words));
-
-  subsampling_sentence_learner->sentence_train(words);
-}
-
-TEST_F(SubsamplingSGNSSentenceLearnerTest, sentence_train) {
-  vector<string> words;
-  words.push_back(string("bbq"));
-  words.push_back(string("baz"));
-  words.push_back(string("bar"));
-  words.push_back(string("bar"));
-  words.push_back(string("bbq"));
-  words.push_back(string("foo"));
-
-  InSequence in_sequence;
-
-  EXPECT_CALL(*lm, lookup("bbq")).WillOnce(Return(2));
-  EXPECT_CALL(*lm, subsample(2)).WillOnce(Return(true));
-  EXPECT_CALL(*lm, lookup("baz")).WillOnce(Return(-1));
-  EXPECT_CALL(*lm, lookup("bar")).WillOnce(Return(1));
-  EXPECT_CALL(*lm, subsample(1)).WillOnce(Return(false));
-  EXPECT_CALL(*sentence_learner, increment("bar"));
-  EXPECT_CALL(*lm, lookup("bar")).WillOnce(Return(1));
-  EXPECT_CALL(*lm, subsample(1)).WillOnce(Return(false));
-  EXPECT_CALL(*sentence_learner, increment("bar"));
-  EXPECT_CALL(*lm, lookup("bbq")).WillOnce(Return(0));
-  EXPECT_CALL(*lm, subsample(0)).WillOnce(Return(true));
-  EXPECT_CALL(*lm, lookup("foo")).WillOnce(Return(-1));
-
-  vector<string> expected_subsampled_words;
-  expected_subsampled_words.push_back(string("bbq"));
-  expected_subsampled_words.push_back(string("baz"));
-  expected_subsampled_words.push_back(string("bbq"));
-  expected_subsampled_words.push_back(string("foo"));
-
-  EXPECT_CALL(*sentence_learner, sentence_train(expected_subsampled_words));
-
-  subsampling_sentence_learner->sentence_train(words);
-}
-
-TEST_F(SubsamplingSGNSSentenceLearnerTest, serialization_fixed_point) {
-  stringstream ostream;
-  subsampling_sentence_learner->serialize(ostream);
-  ostream.flush();
-
-  stringstream istream(ostream.str());
-  auto from_stream(SubsamplingSGNSSentenceLearner::deserialize(istream));
-  ASSERT_EQ(EOF, istream.peek());
-  from_stream->set_model(model);
-
-  EXPECT_TRUE(subsampling_sentence_learner->equals(*from_stream));
-}
-
-TEST_F(SGNSModelTest, serialization_fixed_point) {
-  stringstream ostream;
-  model->serialize(ostream);
-  ostream.flush();
-
-  stringstream istream(ostream.str());
-  auto from_stream(SGNSModel::deserialize(istream));
+  auto from_stream(SGNSSentenceLearner<SGNSTokenLearner<NaiveLanguageModel, EmpiricalSamplingStrategy<NaiveLanguageModel> > >::deserialize(istream));
   ASSERT_EQ(EOF, istream.peek());
 
-  EXPECT_TRUE(model->equals(*from_stream));
+  EXPECT_TRUE(sentence_learner->equals(from_stream));
 }

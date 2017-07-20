@@ -26,7 +26,7 @@ void usage(ostream& s, const string& program) {
   s << "\n";
   s << "Optional arguments:\n";
   s << "  -c\n";
-  s << "     Print word count next to each word.\n";
+  s << "     Print word count next to each word (separated by a space).\n";
   s << "  -h\n";
   s << "     Print this help and exit.\n";
 }
@@ -61,18 +61,18 @@ int main(int argc, char **argv) {
   const char *output_path = argv[optind + 1];
 
   info(__func__, "loading model ...\n");
-  auto language_model(FileSerializer<LanguageModel>(input_path).load());
+  auto language_model(FileSerializer<SpaceSavingLanguageModel>(input_path).load());
 
   info(__func__, "printing words in vocabulary to file ...\n");
   ofstream f;
   f.open(output_path);
   stream_ready_or_throw(f);
-  for (size_t w = 0; w < language_model->size(); ++w) {
-    string word(language_model->reverse_lookup(w));
+  for (size_t w = 0; w < language_model.size(); ++w) {
+    string word(language_model.reverse_lookup(w));
     f.write(word.c_str(), word.size());
     if (with_counts) {
-      f.write("\t", 1);
-      f << language_model->count(w);
+      f.write(" ", 1);
+      f << language_model.count(w);
     }
     f.write("\n", 1);
   }

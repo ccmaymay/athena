@@ -27,6 +27,11 @@ static vector<PRNG> prngs;
 static vector<float> fast_sigmoid_grid;
 
 
+//
+// AlignedVector
+//
+
+
 AlignedVector::AlignedVector(size_t size): _data(0), _size(0) {
   resize(size);
 }
@@ -53,11 +58,15 @@ void AlignedVector::resize(size_t size) {
 }
 
 AlignedVector::AlignedVector(AlignedVector&& other):
-  _data(other._data),
-  _size(other._size) {
-    other._data = 0;
-    other.resize(other._size);
-  }
+    _data(other._data),
+    _size(other._size) {
+  other._data = 0;
+}
+
+AlignedVector::AlignedVector(const AlignedVector& other): _data(0), _size(0) {
+  resize(other._size);
+  memcpy(_data, other._data, other._size * sizeof(float));
+}
 
 AlignedVector::~AlignedVector() {
   if (_data != 0) {
@@ -65,7 +74,6 @@ AlignedVector::~AlignedVector() {
   }
 }
 
-/*
 bool operator==(const AlignedVector& lhs, const AlignedVector& rhs) {
   return lhs.equals(rhs);
 }
@@ -84,14 +92,13 @@ void AlignedVector::serialize(ostream& stream) const {
   stream.write(reinterpret_cast<const char*>(_data), _size * sizeof(float));
 }
 
-AlignedVector* AlignedVector::deserialize(istream& stream) {
-  auto size(*Serializer<size_t>::deserialize(stream));
-  auto container(new AlignedVector(size));
-  stream.read(reinterpret_cast<char*>(container->data()),
+AlignedVector AlignedVector::deserialize(istream& stream) {
+  auto size(Serializer<size_t>::deserialize(stream));
+  AlignedVector container(size);
+  stream.read(reinterpret_cast<char*>(container.data()),
               size * sizeof(float));
   return container;
 }
-*/
 
 
 //
@@ -192,15 +199,15 @@ PRNG& get_urng() {
 
 
 //
-// CountNormalizer
+// ExponentCountNormalizer
 //
 
 
-CountNormalizer::CountNormalizer(float exponent, float offset):
+ExponentCountNormalizer::ExponentCountNormalizer(float exponent, float offset):
     _exponent(exponent),
     _offset(offset) { }
 
-vector<float> CountNormalizer::normalize(const vector<size_t>& counts) const {
+vector<float> ExponentCountNormalizer::normalize(const vector<size_t>& counts) const {
   vector<float> probabilities(counts.size(), 0);
   float normalizer = 0;
   for (size_t i = 0; i < probabilities.size(); ++i) {
@@ -213,24 +220,22 @@ vector<float> CountNormalizer::normalize(const vector<size_t>& counts) const {
   return probabilities;
 }
 
-/*
-void CountNormalizer::serialize(ostream& stream) const {
+void ExponentCountNormalizer::serialize(ostream& stream) const {
   Serializer<float>::serialize(_exponent, stream);
   Serializer<float>::serialize(_offset, stream);
 }
 
-CountNormalizer* CountNormalizer::deserialize(istream& stream) {
-  auto exponent(*Serializer<float>::deserialize(stream));
-  auto offset(*Serializer<float>::deserialize(stream));
-  return new CountNormalizer(exponent, offset);
+ExponentCountNormalizer ExponentCountNormalizer::deserialize(istream& stream) {
+  auto exponent(Serializer<float>::deserialize(stream));
+  auto offset(Serializer<float>::deserialize(stream));
+  return ExponentCountNormalizer(exponent, offset);
 }
 
-bool CountNormalizer::equals(const CountNormalizer& other) const {
+bool ExponentCountNormalizer::equals(const ExponentCountNormalizer& other) const {
   return
     near(_exponent, other._exponent) &&
     near(_offset, other._offset);
 }
-*/
 
 
 //
@@ -264,18 +269,17 @@ size_t NaiveSampler::sample() const {
   return high;
 }
 
-/*
 void NaiveSampler::serialize(ostream& stream) const {
   Serializer<size_t>::serialize(_size, stream);
   Serializer<vector<float> >::serialize(_probability_table, stream);
 }
 
-NaiveSampler* NaiveSampler::deserialize(istream& stream) {
-  auto size(*Serializer<size_t>::deserialize(stream));
+NaiveSampler NaiveSampler::deserialize(istream& stream) {
+  auto size(Serializer<size_t>::deserialize(stream));
   auto probability_table(Serializer<vector<float> >::deserialize(stream));
-  return new NaiveSampler(
+  return NaiveSampler(
     size,
-    move(*probability_table)
+    move(probability_table)
   );
 }
 
@@ -284,7 +288,6 @@ bool NaiveSampler::equals(const NaiveSampler& other) const {
     _size == other._size &&
     near(_probability_table, other._probability_table);
 }
-*/
 
 
 //
@@ -353,21 +356,20 @@ size_t AliasSampler::sample() const {
   }
 }
 
-/*
 void AliasSampler::serialize(ostream& stream) const {
   Serializer<size_t>::serialize(_size, stream);
   Serializer<vector<size_t> >::serialize(_alias_table, stream);
   Serializer<vector<float> >::serialize(_probability_table, stream);
 }
 
-AliasSampler* AliasSampler::deserialize(istream& stream) {
-  auto size(*Serializer<size_t>::deserialize(stream));
+AliasSampler AliasSampler::deserialize(istream& stream) {
+  auto size(Serializer<size_t>::deserialize(stream));
   auto alias_table(Serializer<vector<size_t> >::deserialize(stream));
   auto probability_table(Serializer<vector<float> >::deserialize(stream));
-  return new AliasSampler(
+  return AliasSampler(
     size,
-    move(*alias_table),
-    move(*probability_table)
+    move(alias_table),
+    move(probability_table)
   );
 }
 
@@ -377,7 +379,20 @@ bool AliasSampler::equals(const AliasSampler& other) const {
     _alias_table == other._alias_table &&
     near(_probability_table, other._probability_table);
 }
-*/
+
+AliasSampler& AliasSampler::operator=(AliasSampler const & other) {
+  _size = other._size;
+  _alias_table = other._alias_table;
+  _probability_table = other._probability_table;
+  return *this;
+}
+
+AliasSampler& AliasSampler::operator=(AliasSampler && other) {
+  _size = other._size;
+  _alias_table = std::move(other._alias_table);
+  _probability_table = std::move(other._probability_table);
+  return *this;
+}
 
 
 //
@@ -412,19 +427,17 @@ Discretization::Discretization(const vector<float>& probabilities,
   }
 }
 
-/*
 void Discretization::serialize(ostream& stream) const {
   Serializer<vector<long> >::serialize(_samples, stream);
 }
 
-Discretization* Discretization::deserialize(istream& stream) {
+Discretization Discretization::deserialize(istream& stream) {
   auto samples(Serializer<vector<long> >::deserialize(stream));
-  return new Discretization(
-    move(*samples)
+  return Discretization(
+    move(samples)
   );
 }
 
 bool Discretization::equals(const Discretization& other) const {
   return _samples == other._samples;
 }
-*/
