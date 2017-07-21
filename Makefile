@@ -67,6 +67,7 @@ endif
 
 ifeq ($(HAVE_CBLAS),1)
 	LIBS += $(CBLAS_FLAGS)
+	CXXFLAGS += -DHAVE_CBLAS
 endif
 
 INSTALL_BASE_DIR := $(PREFIX)
