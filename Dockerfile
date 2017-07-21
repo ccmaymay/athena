@@ -3,11 +3,10 @@ FROM centos:7
 RUN yum update -y && yum clean all # cache bust 20160712
 
 RUN yum install -y \
-        atlas \
-        atlas-devel \
         autoconf \
         automake \
         cmake \
+        curl \
         gcc \
         gcc-c++ \
         gcc-gfortran \
@@ -15,7 +14,6 @@ RUN yum install -y \
         libtool \
         m4 \
         make \
-        numpy \
         pkgconfig \
         python \
         python-devel \
@@ -27,19 +25,14 @@ RUN mkdir -p /usr/local/{include,lib}
 
 RUN curl https://bootstrap.pypa.io/get-pip.py | python && \
     pip install --upgrade setuptools && \
-    pip install --upgrade \
-        cython \
-        flake8 \
-        pytest \
-        pytest-cov \
-        gcovr
+    pip install --upgrade gcovr
 
-RUN ln -s /usr/lib64/atlas/libsatlas.so /usr/local/lib/libatlas.so && \
-    ln -s /usr/lib64/atlas/libsatlas.so /usr/local/lib/libf77blas.so && \
-    ln -s /usr/lib64/atlas/libsatlas.so /usr/local/lib/libcblas.so && \
-    ln -s /usr/lib64/atlas/libsatlas.so.3 /usr/local/lib/libatlas.so.3 && \
-    ln -s /usr/lib64/atlas/libsatlas.so.3 /usr/local/lib/libf77blas.so.3 && \
-    ln -s /usr/lib64/atlas/libsatlas.so.3 /usr/local/lib/libcblas.so.3
+RUN curl -L http://github.com/xianyi/OpenBLAS/archive/v0.2.19.tar.gz | tar -xz && \
+    cd OpenBLAS-0.2.19 && \
+    make && \
+    make install PREFIX=/usr/local && \
+    cd .. && \
+    rm -rf OpenBLAS-0.2.19
 
 RUN git clone https://github.com/google/googletest.git && \
     mkdir gtest-build && \
@@ -64,11 +57,7 @@ RUN echo '/usr/local/lib' > /etc/ld.so.conf.d/local.conf && \
 RUN useradd -m -U -s /bin/bash littleowl && \
     passwd -l littleowl
 ADD . /home/littleowl/athena
-RUN cd /home/littleowl/athena && \
-    python setup.py install && \
-    pip install -r test-requirements.txt && \
-    python setup.py clean && \
-    chown -R littleowl:littleowl /home/littleowl
+RUN chown -R littleowl:littleowl /home/littleowl
 
 USER littleowl
 WORKDIR /home/littleowl/athena

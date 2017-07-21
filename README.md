@@ -2,38 +2,25 @@
 
 [![Build Status](https://travis-ci.org/cjmay/athena.svg?branch=master)](https://travis-ci.org/cjmay/athena)
 
-Athena is a library and collection of scripts implementing streaming
+Athena is a library and collection of programs implementing streaming
 embeddings with the space-saving algorithm.  Code released for the
 ["Streaming Word Embeddings with the Space-Saving Algorithm"
 (arXiv:1704.07463) manuscript](https://arxiv.org/abs/1704.07463)
 can be found in the
 [arxiv-1704-07463v1 tag](https://github.com/cjmay/athena/tree/arxiv-1704-07463v1).
 
-Athena comprises a C++ library accessible in Python using Cython.
-The source code is located in `athena/` with some general-purpose
-scripts located in `scripts/`.  More specialized scripts implementing
-the Twitter experiments from the paper are provided in the
-`streaming-embeddings/` subdirectory.  Finally, source code for a few
-simple C++ programs is included under `athena/` along with the library
-code.
+Athena comprises a C++ library and a few programs.
+The source code is located in `src/`.
 
 ## Usage
 
-The athena Python interface must be installed prior to usage.  To
-install it, first install the build dependencies Cython and numpy, if
-you have not done so already, with `pip install cython numpy`.  Then do
-`python setup.py install` to build and install athena and runtime
-dependencies.
-
-To build the simple, standalone C++ programs run `make main`.  The
-compiled programs will be placed in `build/lib/`.
+To build the library by itself run `make lib`.
+To build the programs run `make main`.  The
+compiled library and programs will be placed in `build/lib/`.
 
 ## Testing
 
-As with the athena library and scripts, the athena tests comprise a C++
-component and a Python component.  Most tests are written in C++.
-
-The C++ test suite requires Google Test and Google Mock.  On Linux or
+The test suite requires Google Test and Google Mock.  On Linux or
 OS X, install cmake (e.g., with `sudo yum install cmake` or
 `sudo apt-get install cmake`) and then run the following bash shell
 code to install Google Test and Google Mock:
@@ -59,10 +46,7 @@ git clone https://github.com/google/googletest.git && \
     rm -rf googletest gtest-build gmock-build
 ```
 
-To run the C++ tests do: `make test`
-
-To run the Python tests, install athena, install test requirements with
-`pip install -r test-requirements.txt`, then do: `py.test`
+Now to run the tests do: `make test`
 
 ## References
 

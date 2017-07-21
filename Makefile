@@ -1,11 +1,7 @@
-# This Makefile builds and runs C++ unit tests.
-# For all other purposes use the Python setuptools build:
-#   python setup.py ...
-
 AR := ar
 CXXFLAGS += -std=gnu++11 -Wall -Werror -pedantic -I$(SRC_DIR) -fopenmp -DLOG_INFO
 TEST_CXXFLAGS += $(CXXFLAGS)
-LDFLAGS += -L$(BUILD_DIR) -fopenmp
+LDFLAGS += -L$(LIB_BUILD_DIR) -fopenmp
 TEST_LDFLAGS += $(LDFLAGS)
 LIBS +=
 TEST_LIBS += -lgmock -lgtest -lgtest_main $(LIBS)
@@ -55,7 +51,7 @@ ifeq ($(shell uname -s),Darwin)
 else
 	CXX := g++
 	CXX_LD := g++
-	CBLAS_FLAGS ?= -lcblas
+	CBLAS_FLAGS ?= -lopenblas
 	ifdef DEBUG
 		CXXFLAGS += -fvar-tracking-assignments
 	endif
@@ -76,11 +72,11 @@ INSTALL_BIN_DIR := $(INSTALL_BASE_DIR)/bin
 INSTALL_LIB_DIR := $(INSTALL_BASE_DIR)/lib
 INSTALL_INCLUDE_DIR := $(INSTALL_BASE_DIR)/include
 
-BUILD_DIR := build/lib
-TEST_BUILD_DIR := build/cpp-test
-SRC_DIR := athena
-TEST_SRC_DIR := cpp-test
+BUILD_BASE_DIR := build
 
+SRC_DIR := src
+
+MAIN_BUILD_DIR := $(BUILD_BASE_DIR)/bin
 MAIN_SOURCES := \
     $(SRC_DIR)/spacesaving-word2vec-train.cpp \
     $(SRC_DIR)/spacesaving-word2vec-print.cpp \
@@ -91,13 +87,16 @@ MAIN_SOURCES := \
     $(SRC_DIR)/naive-lm-train.cpp \
     $(SRC_DIR)/naive-lm-print.cpp \
     $(SRC_DIR)/word2vec-vocab-to-naive-lm.cpp
-MAIN_OBJECTS := $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(MAIN_SOURCES))
+MAIN_OBJECTS := $(patsubst $(SRC_DIR)/%.cpp,$(MAIN_BUILD_DIR)/%.o,$(MAIN_SOURCES))
 MAIN_NAMES := $(MAIN_OBJECTS:.o=)
 
-LIB_NAME := $(BUILD_DIR)/libathena.a
+LIB_BUILD_DIR := $(BUILD_BASE_DIR)/lib
+LIB_NAME := $(LIB_BUILD_DIR)/libathena.a
 LIB_SOURCES := $(filter-out $(MAIN_SOURCES),$(wildcard $(SRC_DIR)/*.cpp))
-LIB_OBJECTS := $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(LIB_SOURCES))
+LIB_OBJECTS := $(patsubst $(SRC_DIR)/%.cpp,$(LIB_BUILD_DIR)/%.o,$(LIB_SOURCES))
 
+TEST_SRC_DIR := test
+TEST_BUILD_DIR := $(BUILD_BASE_DIR)/test
 TEST_SOURCES := $(wildcard $(TEST_SRC_DIR)/*_test.cpp)
 TEST_OBJECTS := $(patsubst $(TEST_SRC_DIR)/%.cpp,$(TEST_BUILD_DIR)/%.o,$(TEST_SOURCES))
 TEST_PROGRAM := $(TEST_BUILD_DIR)/run_tests
@@ -106,7 +105,7 @@ MOCK_SOURCES := $(wildcard $(TEST_SRC_DIR)/*_mock.cpp)
 MOCK_OBJECTS := $(patsubst $(TEST_SRC_DIR)/%.cpp,$(TEST_BUILD_DIR)/%.o,$(MOCK_SOURCES))
 
 ifdef GCOV
-	TEST_POSTPROC := gcovr -r . -e '^cpp-test/.*' --gcov-executable gcov
+	TEST_POSTPROC := gcovr -r . -e '^'$(TEST_SRC_DIR)'/.*' --gcov-executable gcov
 else
 	TEST_POSTPROC :=
 endif
@@ -131,11 +130,11 @@ $(LIB_NAME): $(LIB_OBJECTS)
 	@mkdir -p $(@D)
 	$(AR) rs $@ $^
 
-$(MAIN_OBJECTS): $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
+$(MAIN_OBJECTS): $(MAIN_BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -o $@ $< -c
 
-$(LIB_OBJECTS): $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(SRC_DIR)/%.h
+$(LIB_OBJECTS): $(LIB_BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(SRC_DIR)/%.h
 	@mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -o $@ $< -c
 
@@ -153,4 +152,4 @@ $(TEST_PROGRAM): $(MOCK_OBJECTS) $(TEST_OBJECTS) $(LIB_OBJECTS)
 
 .PHONY: clean
 clean:
-	rm -rf $(BUILD_DIR) $(TEST_BUILD_DIR)
+	rm -rf $(BUILD_BASE_DIR)
