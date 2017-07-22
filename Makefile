@@ -93,6 +93,7 @@ MAIN_NAMES := $(MAIN_OBJECTS:.o=)
 LIB_BUILD_DIR := $(BUILD_BASE_DIR)/lib
 LIB_NAME := $(LIB_BUILD_DIR)/libathena.a
 LIB_SOURCES := $(filter-out $(MAIN_SOURCES),$(wildcard $(SRC_DIR)/*.cpp))
+LIB_HEADERS := $(wildcard $(SRC_DIR)/*.h)
 LIB_OBJECTS := $(patsubst $(SRC_DIR)/%.cpp,$(LIB_BUILD_DIR)/%.o,$(LIB_SOURCES))
 
 TEST_SRC_DIR := test
@@ -134,7 +135,7 @@ $(MAIN_OBJECTS): $(MAIN_BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -o $@ $< -c
 
-$(LIB_OBJECTS): $(LIB_BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(SRC_DIR)/%.h
+$(LIB_OBJECTS): $(LIB_BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(SRC_DIR)/%.h $(LIB_HEADERS)
 	@mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -o $@ $< -c
 
