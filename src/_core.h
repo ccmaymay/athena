@@ -97,20 +97,8 @@ class NaiveLanguageModel {
         _counters(std::move(counters)),
         _word_ids(std::move(word_ids)),
         _words(std::move(words)) { }
-    NaiveLanguageModel(NaiveLanguageModel&& other):
-        _subsample_threshold(other._subsample_threshold),
-        _size(other._size),
-        _total(other._total),
-        _counters(std::move(other._counters)),
-        _word_ids(std::move(other._word_ids)),
-        _words(std::move(other._words)) { }
-    NaiveLanguageModel(const NaiveLanguageModel& other):
-        _subsample_threshold(other._subsample_threshold),
-        _size(other._size),
-        _total(other._total),
-        _counters(other._counters),
-        _word_ids(other._word_ids),
-        _words(other._words) { }
+    NaiveLanguageModel(NaiveLanguageModel&& other) = default;
+    NaiveLanguageModel(const NaiveLanguageModel& other) = default;
 };
 
 
@@ -183,28 +171,8 @@ class SpaceSavingLanguageModel {
         _internal_ids(std::move(internal_ids)),
         _external_ids(std::move(external_ids)),
         _words(std::move(words)) { }
-    SpaceSavingLanguageModel(SpaceSavingLanguageModel&& other):
-        _subsample_threshold(other._subsample_threshold),
-        _num_counters(other._num_counters),
-        _size(other._size),
-        _total(other._total),
-        _min_idx(other._min_idx),
-        _counters(std::move(other._counters)),
-        _word_ids(std::move(other._word_ids)),
-        _internal_ids(std::move(other._internal_ids)),
-        _external_ids(std::move(other._external_ids)),
-        _words(std::move(other._words)) { }
-    SpaceSavingLanguageModel(const SpaceSavingLanguageModel& other):
-        _subsample_threshold(other._subsample_threshold),
-        _num_counters(other._num_counters),
-        _size(other._size),
-        _total(other._total),
-        _min_idx(other._min_idx),
-        _counters(other._counters),
-        _word_ids(other._word_ids),
-        _internal_ids(other._internal_ids),
-        _external_ids(other._external_ids),
-        _words(other._words) { }
+    SpaceSavingLanguageModel(SpaceSavingLanguageModel&& other) = default;
+    SpaceSavingLanguageModel(const SpaceSavingLanguageModel& other) = default;
 
   private:
     void _update_min_idx();
@@ -243,18 +211,8 @@ class WordContextFactorization {
         _actual_embedding_dim(actual_embedding_dim),
         _word_embeddings(std::move(word_embeddings)),
         _context_embeddings(std::move(context_embeddings)) { }
-    WordContextFactorization(WordContextFactorization&& other):
-        _vocab_dim(other._vocab_dim),
-        _embedding_dim(other._embedding_dim),
-        _actual_embedding_dim(other._actual_embedding_dim),
-        _word_embeddings(std::move(other._word_embeddings)),
-        _context_embeddings(std::move(other._context_embeddings)) { }
-    WordContextFactorization(const WordContextFactorization& other):
-        _vocab_dim(other._vocab_dim),
-        _embedding_dim(other._embedding_dim),
-        _actual_embedding_dim(other._actual_embedding_dim),
-        _word_embeddings(other._word_embeddings),
-        _context_embeddings(other._context_embeddings) { }
+    WordContextFactorization(WordContextFactorization&& other) = default;
+    WordContextFactorization(const WordContextFactorization& other) = default;
 };
 
 
@@ -294,20 +252,8 @@ class SGD {
           _rho_lower_bound(rho_lower_bound),
           _rho(std::move(rho)),
           _t(std::move(t)) { }
-    SGD(SGD&& other):
-          _dimension(other._dimension),
-          _tau(other._tau),
-          _kappa(other._kappa),
-          _rho_lower_bound(other._rho_lower_bound),
-          _rho(std::move(other._rho)),
-          _t(std::move(other._t)) { }
-    SGD(const SGD& other):
-          _dimension(other._dimension),
-          _tau(other._tau),
-          _kappa(other._kappa),
-          _rho_lower_bound(other._rho_lower_bound),
-          _rho(other._rho),
-          _t(other._t) { }
+    SGD(SGD&& other) = default;
+    SGD(const SGD& other) = default;
 
   private:
     void _compute_rho(size_t dimension);
@@ -328,8 +274,8 @@ class UniformSamplingStrategy {
     void
       step(const LanguageModel& language_model, size_t word_idx) { }
 
-    UniformSamplingStrategy(UniformSamplingStrategy&& other) { }
-    UniformSamplingStrategy(const UniformSamplingStrategy& other) { }
+    UniformSamplingStrategy(UniformSamplingStrategy&& other) = default;
+    UniformSamplingStrategy(const UniformSamplingStrategy& other) = default;
 
     virtual ~UniformSamplingStrategy() { }
 
@@ -350,13 +296,17 @@ template <class LanguageModel, class CountNormalizer>
 class EmpiricalSamplingStrategy {
   size_t _refresh_interval;
   size_t _refresh_burn_in;
-  std::shared_ptr<CountNormalizer> _normalizer;
-  AliasSampler _alias_sampler;
-  size_t _t;
-  bool _initialized;
 
   public:
-    EmpiricalSamplingStrategy(std::shared_ptr<CountNormalizer> normalizer,
+    CountNormalizer normalizer;
+    AliasSampler alias_sampler;
+
+  private:
+    size_t _t;
+    bool _initialized;
+
+  public:
+    EmpiricalSamplingStrategy(CountNormalizer&& normalizer_,
                               size_t
                                 refresh_interval = DEFAULT_REFRESH_INTERVAL,
                               size_t
@@ -376,30 +326,18 @@ class EmpiricalSamplingStrategy {
 
     EmpiricalSamplingStrategy(size_t refresh_interval,
                               size_t refresh_burn_in,
-                              std::shared_ptr<CountNormalizer> normalizer,
-                              AliasSampler&& alias_sampler,
+                              CountNormalizer&& normalizer_,
+                              AliasSampler&& alias_sampler_,
                               size_t t,
                               bool initialized):
         _refresh_interval(refresh_interval),
         _refresh_burn_in(refresh_burn_in),
-        _normalizer(normalizer),
-        _alias_sampler(std::move(alias_sampler)),
+        normalizer(std::move(normalizer_)),
+        alias_sampler(std::move(alias_sampler_)),
         _t(t),
         _initialized(initialized) { }
-    EmpiricalSamplingStrategy(EmpiricalSamplingStrategy&& other):
-        _refresh_interval(other._refresh_interval),
-        _refresh_burn_in(other._refresh_burn_in),
-        _normalizer(other._normalizer),
-        _alias_sampler(std::move(other._alias_sampler)),
-        _t(other._t),
-        _initialized(other._initialized) { }
-    EmpiricalSamplingStrategy(const EmpiricalSamplingStrategy& other):
-        _refresh_interval(other._refresh_interval),
-        _refresh_burn_in(other._refresh_burn_in),
-        _normalizer(other._normalizer),
-        _alias_sampler(other._alias_sampler),
-        _t(other._t),
-        _initialized(other._initialized) { }
+    EmpiricalSamplingStrategy(EmpiricalSamplingStrategy&& other) = default;
+    EmpiricalSamplingStrategy(const EmpiricalSamplingStrategy& other) = default;
 };
 
 
@@ -410,19 +348,19 @@ class ReservoirSamplingStrategy;
 
 template <class LanguageModel, class ReservoirSamplerType>
 class ReservoirSamplingStrategy {
-  std::shared_ptr<ReservoirSamplerType> _reservoir_sampler;
-
   public:
+    ReservoirSamplerType reservoir_sampler;
+
     ReservoirSamplingStrategy(
-      std::shared_ptr<ReservoirSamplerType> reservoir_sampler):
-        _reservoir_sampler(reservoir_sampler) { }
+      ReservoirSamplerType&& reservoir_sampler_):
+        reservoir_sampler(std::move(reservoir_sampler_)) { }
     // (randomly) add word to reservoir
     void
       step(const LanguageModel& language_model, size_t word_idx) {
-        _reservoir_sampler->insert(word_idx);
+        reservoir_sampler.insert(word_idx);
       }
     long sample_idx(const LanguageModel& language_model) {
-      return _reservoir_sampler->sample();
+      return reservoir_sampler.sample();
     }
     virtual ~ReservoirSamplingStrategy() { }
 
@@ -430,10 +368,8 @@ class ReservoirSamplingStrategy {
     void serialize(std::ostream& stream) const;
     static ReservoirSamplingStrategy deserialize(std::istream& stream);
 
-    ReservoirSamplingStrategy(ReservoirSamplingStrategy&& other):
-      _reservoir_sampler(other._reservoir_sampler) { }
-    ReservoirSamplingStrategy(const ReservoirSamplingStrategy& other):
-      _reservoir_sampler(other._reservoir_sampler) { }
+    ReservoirSamplingStrategy(ReservoirSamplingStrategy&& other) = default;
+    ReservoirSamplingStrategy(const ReservoirSamplingStrategy& other) = default;
 };
 
 
@@ -444,20 +380,18 @@ class DiscreteSamplingStrategy;
 
 template <class LanguageModel, class DiscretizationType>
 class DiscreteSamplingStrategy {
-  std::shared_ptr<DiscretizationType> _discretization;
-
   public:
-    DiscreteSamplingStrategy(std::shared_ptr<DiscretizationType> discretization):
-      _discretization(discretization) { }
+    DiscretizationType discretization;
+
+    DiscreteSamplingStrategy(DiscretizationType&& discretization_):
+      discretization(std::move(discretization_)) { }
     void step(const LanguageModel& language_model, size_t word_idx) { }
     long sample_idx(const LanguageModel& language_model) {
-      return _discretization->sample();
+      return discretization.sample();
     }
 
-    DiscreteSamplingStrategy(DiscreteSamplingStrategy&& other):
-      _discretization(other._discretization) { }
-    DiscreteSamplingStrategy(const DiscreteSamplingStrategy& other):
-      _discretization(other._discretization) { }
+    DiscreteSamplingStrategy(DiscreteSamplingStrategy&& other) = default;
+    DiscreteSamplingStrategy(const DiscreteSamplingStrategy& other) = default;
 
     virtual ~DiscreteSamplingStrategy() { }
 
@@ -485,10 +419,8 @@ class StaticContextStrategy {
     bool equals(const StaticContextStrategy& other) const;
     void serialize(std::ostream& stream) const;
     static StaticContextStrategy deserialize(std::istream& stream);
-    StaticContextStrategy(StaticContextStrategy&& other):
-        _symm_context(other._symm_context) { }
-    StaticContextStrategy(const StaticContextStrategy& other):
-        _symm_context(other._symm_context) { }
+    StaticContextStrategy(StaticContextStrategy&& other) = default;
+    StaticContextStrategy(const StaticContextStrategy& other) = default;
 };
 
 
@@ -511,10 +443,8 @@ class DynamicContextStrategy {
     void serialize(std::ostream& stream) const;
     static DynamicContextStrategy deserialize(std::istream& stream);
 
-    DynamicContextStrategy(DynamicContextStrategy&& other):
-        _symm_context(other._symm_context) { }
-    DynamicContextStrategy(const DynamicContextStrategy& other):
-        _symm_context(other._symm_context) { }
+    DynamicContextStrategy(DynamicContextStrategy&& other) = default;
+    DynamicContextStrategy(const DynamicContextStrategy& other) = default;
 };
 
 
@@ -537,13 +467,13 @@ long UniformSamplingStrategy<LanguageModel>::sample_idx(const LanguageModel& lan
 
 template <class LanguageModel, class CountNormalizer>
 EmpiricalSamplingStrategy<LanguageModel, CountNormalizer>::EmpiricalSamplingStrategy(
-    std::shared_ptr<CountNormalizer> normalizer,
+    CountNormalizer&& normalizer_,
     size_t refresh_interval,
     size_t refresh_burn_in):
   _refresh_interval(refresh_interval),
   _refresh_burn_in(refresh_burn_in),
-  _normalizer(normalizer),
-  _alias_sampler(std::vector<float>()),
+  normalizer(std::move(normalizer_)),
+  alias_sampler(std::vector<float>()),
   _t(0),
   _initialized(false) {
 }
@@ -552,12 +482,12 @@ template <class LanguageModel, class CountNormalizer>
 long EmpiricalSamplingStrategy<LanguageModel, CountNormalizer>::sample_idx(
     const LanguageModel& language_model) {
   if (! _initialized) {
-    _alias_sampler = AliasSampler(
-      _normalizer->normalize(language_model.counts())
+    alias_sampler = AliasSampler(
+      normalizer.normalize(language_model.counts())
     );
     _initialized = true;
   }
-  return _alias_sampler.sample();
+  return alias_sampler.sample();
 }
 
 template <class LanguageModel, class CountNormalizer>
@@ -568,8 +498,8 @@ void EmpiricalSamplingStrategy<LanguageModel, CountNormalizer>::step(
       (_refresh_interval > 0 &&
        (_t < _refresh_burn_in ||
         (_t - _refresh_burn_in) % _refresh_interval == 0))) {
-    _alias_sampler = AliasSampler(
-      _normalizer->normalize(language_model.counts())
+    alias_sampler = AliasSampler(
+      normalizer.normalize(language_model.counts())
     );
     _initialized = true;
   }
@@ -579,8 +509,8 @@ template <class LanguageModel, class CountNormalizer>
 void EmpiricalSamplingStrategy<LanguageModel, CountNormalizer>::serialize(std::ostream& stream) const {
   Serializer<size_t>::serialize(_refresh_interval, stream);
   Serializer<size_t>::serialize(_refresh_burn_in, stream);
-  Serializer<CountNormalizer>::serialize(*_normalizer, stream);
-  Serializer<AliasSampler>::serialize(_alias_sampler, stream);
+  Serializer<CountNormalizer>::serialize(normalizer, stream);
+  Serializer<AliasSampler>::serialize(alias_sampler, stream);
   Serializer<size_t>::serialize(_t, stream);
   Serializer<bool>::serialize(_initialized, stream);
 }
@@ -590,15 +520,15 @@ EmpiricalSamplingStrategy<LanguageModel, CountNormalizer>
     EmpiricalSamplingStrategy<LanguageModel, CountNormalizer>::deserialize(std::istream& stream) {
   auto refresh_interval(Serializer<size_t>::deserialize(stream));
   auto refresh_burn_in(Serializer<size_t>::deserialize(stream));
-  auto normalizer(Serializer<CountNormalizer>::deserialize(stream));
-  auto alias_sampler(Serializer<AliasSampler>::deserialize(stream));
+  auto normalizer_(Serializer<CountNormalizer>::deserialize(stream));
+  auto alias_sampler_(Serializer<AliasSampler>::deserialize(stream));
   auto t(Serializer<size_t>::deserialize(stream));
   auto initialized(Serializer<bool>::deserialize(stream));
   return EmpiricalSamplingStrategy(
     refresh_interval,
     refresh_burn_in,
-    std::make_shared<CountNormalizer>(std::move(normalizer)),
-    std::move(alias_sampler),
+    std::move(normalizer_),
+    std::move(alias_sampler_),
     t,
     initialized
   );
@@ -609,8 +539,8 @@ bool EmpiricalSamplingStrategy<LanguageModel, CountNormalizer>::equals(const Emp
   return
     _refresh_interval == other._refresh_interval &&
     _refresh_burn_in == other._refresh_burn_in &&
-    _normalizer->equals(*(other._normalizer)) &&
-    _alias_sampler.equals(other._alias_sampler) &&
+    normalizer.equals(other.normalizer) &&
+    alias_sampler.equals(other.alias_sampler) &&
     _t == other._t &&
     _initialized == other._initialized;
 }
@@ -623,7 +553,7 @@ bool EmpiricalSamplingStrategy<LanguageModel, CountNormalizer>::equals(const Emp
 
 template <class LanguageModel, class ReservoirSamplerType>
 void ReservoirSamplingStrategy<LanguageModel, ReservoirSamplerType>::serialize(std::ostream& stream) const {
-  Serializer<ReservoirSamplerType>::serialize(*_reservoir_sampler, stream);
+  Serializer<ReservoirSamplerType>::serialize(reservoir_sampler, stream);
 }
 
 template <class LanguageModel, class ReservoirSamplerType>
@@ -631,14 +561,14 @@ ReservoirSamplingStrategy<LanguageModel, ReservoirSamplerType>
     ReservoirSamplingStrategy<LanguageModel, ReservoirSamplerType>::deserialize(std::istream& stream) {
   auto reservoir_sampler(Serializer<ReservoirSamplerType>::deserialize(stream));
   return ReservoirSamplingStrategy<LanguageModel, ReservoirSamplerType>(
-    std::make_shared<ReservoirSamplerType>(std::move(reservoir_sampler))
+    std::move(reservoir_sampler)
   );
 }
 
 template <class LanguageModel, class ReservoirSamplerType>
 bool ReservoirSamplingStrategy<LanguageModel, ReservoirSamplerType>::equals(
     const ReservoirSamplingStrategy<LanguageModel, ReservoirSamplerType>& other) const {
-  return _reservoir_sampler->equals(*(other._reservoir_sampler));
+  return reservoir_sampler.equals(other.reservoir_sampler);
 }
 
 
@@ -649,7 +579,7 @@ bool ReservoirSamplingStrategy<LanguageModel, ReservoirSamplerType>::equals(
 
 template <class LanguageModel, class DiscretizationType>
 void DiscreteSamplingStrategy<LanguageModel, DiscretizationType>::serialize(std::ostream& stream) const {
-  Serializer<DiscretizationType>::serialize(*_discretization, stream);
+  Serializer<DiscretizationType>::serialize(discretization, stream);
 }
 
 template <class LanguageModel, class DiscretizationType>
@@ -657,14 +587,14 @@ DiscreteSamplingStrategy<LanguageModel, DiscretizationType>
     DiscreteSamplingStrategy<LanguageModel, DiscretizationType>::deserialize(std::istream& stream) {
   auto discretization(Serializer<DiscretizationType>::deserialize(stream));
   return DiscreteSamplingStrategy<LanguageModel, DiscretizationType>(
-    std::make_shared<DiscretizationType>(std::move(discretization))
+    std::move(discretization)
   );
 }
 
 template <class LanguageModel, class DiscretizationType>
 bool DiscreteSamplingStrategy<LanguageModel, DiscretizationType>::equals(
     const DiscreteSamplingStrategy<LanguageModel, DiscretizationType>& other) const {
-  return _discretization->equals(*(other._discretization));
+  return discretization.equals(other.discretization);
 }
 
 

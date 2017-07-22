@@ -214,19 +214,19 @@ TEST_F(EmpiricalSamplingStrategyTest, step) {
   vector<size_t> _counts = {7, 47, 9};
   EXPECT_CALL(*lm, counts()).WillRepeatedly(Return(_counts));
   vector<float> _normalized_counts = {0, 0, 1};
-  EXPECT_CALL(*count_normalizer, normalize(_counts)).
+  EXPECT_CALL(strategy->normalizer, normalize(_counts)).
     WillRepeatedly(Return(_normalized_counts));
 
   // recompute during burn-in
 
   _normalized_counts = {1, 0, 0};
-  EXPECT_CALL(*count_normalizer, normalize(_counts)).
+  EXPECT_CALL(strategy->normalizer, normalize(_counts)).
     WillRepeatedly(Return(_normalized_counts));
   strategy->step(*lm, 42);
   for (size_t i = 0; i < num_trials; ++i) { EXPECT_EQ(0, strategy->sample_idx(*lm)); }
 
   _normalized_counts = {0, 0, 1};
-  EXPECT_CALL(*count_normalizer, normalize(_counts)).
+  EXPECT_CALL(strategy->normalizer, normalize(_counts)).
     WillRepeatedly(Return(_normalized_counts));
   strategy->step(*lm, 42);
   for (size_t i = 0; i < num_trials; ++i) { EXPECT_EQ(2, strategy->sample_idx(*lm)); }
@@ -234,7 +234,7 @@ TEST_F(EmpiricalSamplingStrategyTest, step) {
   // recompute every refresh_interval steps
 
   _normalized_counts = {1, 0, 0};
-  EXPECT_CALL(*count_normalizer, normalize(_counts)).
+  EXPECT_CALL(strategy->normalizer, normalize(_counts)).
     WillRepeatedly(Return(_normalized_counts));
   strategy->step(*lm, 42);
   for (size_t i = 0; i < num_trials; ++i) { EXPECT_EQ(2, strategy->sample_idx(*lm)); }
@@ -248,7 +248,7 @@ TEST_F(EmpiricalSamplingStrategyTest, step) {
   for (size_t i = 0; i < num_trials; ++i) { EXPECT_EQ(0, strategy->sample_idx(*lm)); }
 
   _normalized_counts = {0, 1, 0};
-  EXPECT_CALL(*count_normalizer, normalize(_counts)).
+  EXPECT_CALL(strategy->normalizer, normalize(_counts)).
     WillRepeatedly(Return(_normalized_counts));
   strategy->step(*lm, 42);
   for (size_t i = 0; i < num_trials; ++i) { EXPECT_EQ(0, strategy->sample_idx(*lm)); }
@@ -295,7 +295,7 @@ TEST_F(EmpiricalSamplingStrategySerializationTest, initialized_serialization_fix
 }
 
 TEST_F(ReservoirSamplingStrategyTest, sample_idx) {
-  EXPECT_CALL(*sampler, sample()).WillRepeatedly(Return(47));
+  EXPECT_CALL(strategy->reservoir_sampler, sample()).WillRepeatedly(Return(47));
 
   const size_t num_samples = 100000;
   for (size_t t = 0; t < num_samples; ++t) {
@@ -305,7 +305,7 @@ TEST_F(ReservoirSamplingStrategyTest, sample_idx) {
 }
 
 TEST_F(ReservoirSamplingStrategyTest, step) {
-  EXPECT_CALL(*sampler, insert(47));
+  EXPECT_CALL(strategy->reservoir_sampler, insert(47));
   strategy->step(*lm, 47);
 }
 
@@ -323,7 +323,7 @@ TEST_F(ReservoirSamplingStrategySerializationTest, serialization_fixed_point) {
 }
 
 TEST_F(DiscreteSamplingStrategyTest, sample_idx) {
-  EXPECT_CALL(*discretization, sample()).WillRepeatedly(Return(47));
+  EXPECT_CALL(strategy->discretization, sample()).WillRepeatedly(Return(47));
 
   const size_t num_samples = 100000;
   for (size_t t = 0; t < num_samples; ++t) {

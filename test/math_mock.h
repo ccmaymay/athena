@@ -9,6 +9,9 @@
 
 class MockCountNormalizer {
   public:
+    MockCountNormalizer() { }
+    MockCountNormalizer(MockCountNormalizer&& other) { }
+
     MOCK_CONST_METHOD1(normalize, std::vector<float>
                                     (const std::vector<size_t>& counts));
 
@@ -22,6 +25,9 @@ static const long mock_reservoir_sampler_ret = 99;
 
 class MockLongReservoirSampler {
   public:
+    MockLongReservoirSampler() { }
+    MockLongReservoirSampler(MockLongReservoirSampler&& other) { }
+
     MOCK_CONST_METHOD0(sample, long ());
     const long& operator[](size_t idx) const {
       return mock_reservoir_sampler_ret;
@@ -41,6 +47,9 @@ static const long mock_discretization_ret = 98;
 
 class MockDiscretization {
   public:
+    MockDiscretization() { }
+    MockDiscretization(MockDiscretization&& other) { }
+
     MOCK_CONST_METHOD0(sample, long ());
     const long& operator[](size_t idx) const {
       return mock_discretization_ret;

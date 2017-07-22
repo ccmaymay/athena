@@ -10,6 +10,9 @@
 
 class MockLanguageModel {
   public:
+    MockLanguageModel() { }
+    MockLanguageModel(MockLanguageModel&& other) { }
+
     MOCK_METHOD1(increment,
                  std::pair<long,std::string> (const std::string& word));
     MOCK_CONST_METHOD1(lookup, long (const std::string& word));
@@ -29,6 +32,9 @@ class MockLanguageModel {
 
 class MockSGD {
   public:
+    MockSGD() { }
+    MockSGD(MockSGD&& other) { }
+
     MOCK_METHOD1(step, void (size_t dim));
     MOCK_CONST_METHOD1(get_rho, float (size_t dim));
     MOCK_METHOD4(gradient_update, void (size_t dim, size_t n, const float *g,
@@ -48,6 +54,9 @@ class MockSGD {
 
 class MockSamplingStrategy {
   public:
+    MockSamplingStrategy() { }
+    MockSamplingStrategy(MockSamplingStrategy&& other) { }
+
     MOCK_METHOD1(sample_idx,
       long (const MockLanguageModel& language_model));
     MOCK_METHOD2(step,
@@ -63,6 +72,9 @@ class MockSamplingStrategy {
 
 class MockContextStrategy {
   public:
+    MockContextStrategy() { }
+    MockContextStrategy(MockContextStrategy&& other) { }
+
     MOCK_CONST_METHOD2(size,
       std::pair<size_t,size_t> (size_t avail_left, size_t avail_right));
 

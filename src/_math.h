@@ -130,10 +130,8 @@ class ExponentCountNormalizer {
                                             counts) const;
     virtual ~ExponentCountNormalizer() { }
 
-    ExponentCountNormalizer(ExponentCountNormalizer&& other):
-        _exponent(other._exponent), _offset(other._offset) { }
-    ExponentCountNormalizer(const ExponentCountNormalizer& other):
-        _exponent(other._exponent), _offset(other._offset) { }
+    ExponentCountNormalizer(ExponentCountNormalizer&& other) = default;
+    ExponentCountNormalizer(const ExponentCountNormalizer& other) = default;
 
     bool equals(const ExponentCountNormalizer& other) const;
     void serialize(std::ostream& stream) const;
@@ -158,12 +156,8 @@ class NaiveSampler {
                  std::vector<float>&& probability_table):
         _size(size),
         _probability_table(std::move(probability_table)) { }
-    NaiveSampler(NaiveSampler&& other):
-        _size(other._size),
-        _probability_table(std::move(other._probability_table)) { }
-    NaiveSampler(const NaiveSampler& other):
-        _size(other._size),
-        _probability_table(other._probability_table) { }
+    NaiveSampler(NaiveSampler&& other) = default;
+    NaiveSampler(const NaiveSampler& other) = default;
 };
 
 
@@ -187,14 +181,8 @@ class AliasSampler {
         _size(size),
         _alias_table(std::move(alias_table)),
         _probability_table(std::move(probability_table)) { }
-    AliasSampler(AliasSampler&& other):
-        _size(other._size),
-        _alias_table(std::move(other._alias_table)),
-        _probability_table(std::move(other._probability_table)) { }
-    AliasSampler(const AliasSampler& other):
-        _size(other._size),
-        _alias_table(other._alias_table),
-        _probability_table(other._probability_table) { }
+    AliasSampler(AliasSampler&& other) = default;
+    AliasSampler(const AliasSampler& other) = default;
 
     AliasSampler& operator=(AliasSampler const & other);
     AliasSampler& operator=(AliasSampler && other);
@@ -234,16 +222,8 @@ class ReservoirSampler {
         _filled_size(filled_size),
         _count(count),
         _reservoir(std::move(reservoir)) { }
-    ReservoirSampler(ReservoirSampler<T>&& other):
-        _size(other._size),
-        _filled_size(other._filled_size),
-        _count(other._count),
-        _reservoir(std::move(other._reservoir)) { }
-    ReservoirSampler(const ReservoirSampler<T>& other):
-        _size(other._size),
-        _filled_size(other._filled_size),
-        _count(other._count),
-        _reservoir(other._reservoir) { }
+    ReservoirSampler(ReservoirSampler<T>&& other) = default;
+    ReservoirSampler(const ReservoirSampler<T>& other) = default;
 };
 
 
@@ -267,10 +247,8 @@ class Discretization {
 
     Discretization(std::vector<long>&& samples):
       _samples(std::move(samples)) { }
-    Discretization(Discretization&& other):
-      _samples(std::move(other._samples)) { }
-    Discretization(const Discretization& other):
-      _samples(other._samples) { }
+    Discretization(Discretization&& other) = default;
+    Discretization(const Discretization& other) = default;
 };
 
 

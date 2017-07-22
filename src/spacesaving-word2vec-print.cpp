@@ -75,28 +75,28 @@ int main(int argc, char **argv) {
 
   info(__func__, "loading model ...\n");
   auto sentence_learner(FileSerializer<SGNSSentenceLearnerType>(input_path).load());
-  auto factorization(sentence_learner.token_learner->factorization);
-  auto language_model(sentence_learner.token_learner->language_model);
+  WordContextFactorization& factorization(sentence_learner.token_learner.factorization);
+  SpaceSavingLanguageModel& language_model(sentence_learner.token_learner.language_model);
 
   ofstream f;
   f.open(output_path);
   stream_ready_or_throw(f);
   if (with_dims) {
     info(__func__, "printing dimensions to file ...\n");
-    f << factorization->get_vocab_dim();
+    f << factorization.get_vocab_dim();
     f.write(" ", 1);
-    f << factorization->get_embedding_dim();
+    f << factorization.get_embedding_dim();
     f.write("\n", 1);
   }
   info(__func__, "printing embeddings to file ...\n");
-  for (size_t i = 0; i < factorization->get_vocab_dim(); ++i) {
+  for (size_t i = 0; i < factorization.get_vocab_dim(); ++i) {
     if (with_words) {
-      string word(language_model->reverse_lookup(i));
+      string word(language_model.reverse_lookup(i));
       f.write(word.c_str(), word.size());
       f.write(" ", 1);
     }
-    for (size_t j = 0; j < factorization->get_embedding_dim(); ++j) {
-      f << factorization->get_word_embedding(i)[j];
+    for (size_t j = 0; j < factorization.get_embedding_dim(); ++j) {
+      f << factorization.get_word_embedding(i)[j];
       f.write(" ", 1); // write extra space at end, just like word2vec
     }
     f.write("\n", 1);

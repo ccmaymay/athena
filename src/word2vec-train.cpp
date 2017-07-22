@@ -28,7 +28,8 @@
 #define DEFAULT_KAPPA 2.5e-2
 
 
-typedef SGNSTokenLearner<NaiveLanguageModel, DiscreteSamplingStrategy<NaiveLanguageModel> > SGNSTokenLearnerType;
+typedef DiscreteSamplingStrategy<NaiveLanguageModel> NegSamplingStrategy;
+typedef SGNSTokenLearner<NaiveLanguageModel, NegSamplingStrategy> SGNSTokenLearnerType;
 typedef SGNSSentenceLearner<SGNSTokenLearnerType, DynamicContextStrategy> SGNSSentenceLearnerType;
 
 using namespace std;
@@ -127,11 +128,11 @@ int main(int argc, char **argv) {
   info(__func__, "seeding random number generator ...\n");
   seed_default();
 
-  shared_ptr<NaiveLanguageModel> language_model;
+  shared_ptr<NaiveLanguageModel> _lm;
 
   if (lm_path.empty()) {
     info(__func__, "initializing language model ...\n");
-    language_model = make_shared<NaiveLanguageModel>(subsample_threshold);
+    _lm = make_shared<NaiveLanguageModel>(subsample_threshold);
 
     info(__func__, "loading words into vocabulary ...\n");
     ifstream f;
@@ -141,47 +142,43 @@ int main(int argc, char **argv) {
     while (reader.has_next()) {
       vector<string> sentence(reader.next());
       for (auto it = sentence.begin(); it != sentence.end(); ++it) {
-        language_model->increment(*it);
+        _lm->increment(*it);
       }
     }
     f.close();
 
     info(__func__, "truncating language model ...\n");
-    language_model->truncate(vocab_dim);
+    _lm->truncate(vocab_dim);
   } else {
     info(__func__, "loading language model ...\n");
-    language_model = make_shared<NaiveLanguageModel>(move(
+    _lm = make_shared<NaiveLanguageModel>(move(
       FileSerializer<NaiveLanguageModel>(lm_path).load()
     ));
 
     info(__func__, "setting vocab dim to language model size " <<
-                     language_model->size() <<
+                     _lm->size() <<
                      " ...\n");
-    vocab_dim = language_model->size();
+    vocab_dim = _lm->size();
   }
 
-  info(__func__, "initializing negative sampling table ...\n");
-  ExponentCountNormalizer normalizer(SMOOTHING_EXPONENT, SMOOTHING_OFFSET);
-
   info(__func__, "initializing SGNS model ...\n");
-  auto sgd(make_shared<SGD>(
-    vocab_dim,
-    language_model->total(),
-    kappa,
-    RHO_LOWER_BOUND_FACTOR * kappa));
+  const size_t total_word_count(_lm->total());
+  vector<size_t> word_counts(_lm->counts());
   SGNSSentenceLearnerType sentence_learner(
-    make_shared<SGNSTokenLearnerType>(
-      make_shared<WordContextFactorization>(vocab_dim, embedding_dim),
-      make_shared<DiscreteSamplingStrategy<NaiveLanguageModel> >(
-        make_shared<Discretization>(
-          normalizer.normalize(language_model->counts()),
-          NEG_SAMPLING_TABLE_SIZE)),
-      language_model,
-      sgd
+    SGNSTokenLearnerType(
+      WordContextFactorization(vocab_dim, embedding_dim),
+      NegSamplingStrategy(Discretization(
+        ExponentCountNormalizer(SMOOTHING_EXPONENT, SMOOTHING_OFFSET).normalize(word_counts),
+        NEG_SAMPLING_TABLE_SIZE)),
+      NaiveLanguageModel(move(*_lm)),
+      SGD(vocab_dim, total_word_count, kappa, RHO_LOWER_BOUND_FACTOR * kappa)
     ),
-    make_shared<DynamicContextStrategy>(symm_context),
+    DynamicContextStrategy(symm_context),
     neg_samples
   );
+  _lm.reset();
+  NaiveLanguageModel& language_model(sentence_learner.token_learner.language_model);
+  SGD& sgd(sentence_learner.token_learner.sgd);
 
   info(__func__, "training ...\n");
   size_t words_seen = 0, prev_words_seen = 0;
@@ -196,9 +193,9 @@ int main(int argc, char **argv) {
     vector<long> word_ids;
     word_ids.reserve(sentence.size());
     for (auto it = sentence.begin(); it != sentence.end(); ++it) {
-      long word_id = language_model->lookup(*it);
+      long word_id = language_model.lookup(*it);
       if (word_id >= 0) {
-        if (language_model->subsample(word_id)) {
+        if (language_model.subsample(word_id)) {
           word_ids.push_back(word_id);
         }
         ++words_seen;
@@ -209,7 +206,7 @@ int main(int argc, char **argv) {
 
     for (size_t input_word_pos = 0; input_word_pos < word_ids.size();
          ++input_word_pos) {
-      sgd->step(word_ids[input_word_pos]);
+      sgd.step(word_ids[input_word_pos]);
     }
 
     time_t now = time(NULL);

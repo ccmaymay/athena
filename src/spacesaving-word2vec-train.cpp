@@ -132,26 +132,19 @@ int main(int argc, char **argv) {
   seed_default();
 
   info(__func__, "initializing SGNS model ...\n");
-  auto sgd(make_shared<SGD>(
-    vocab_dim,
-    tau,
-    kappa,
-    RHO_LOWER_BOUND_FACTOR * kappa));
-  auto language_model(make_shared<SpaceSavingLanguageModel>(
-    vocab_dim, subsample_threshold));
-  auto neg_sampling_strategy(make_shared<NegSamplingStrategy>(
-    make_shared<ReservoirSampler<long> >(NEG_SAMPLING_TABLE_SIZE)));
-  auto token_learner(make_shared<SGNSTokenLearnerType>(
-    make_shared<WordContextFactorization>(vocab_dim, embedding_dim),
-    neg_sampling_strategy,
-    language_model,
-    sgd
-  ));
   SGNSSentenceLearnerType sentence_learner(
-    token_learner,
-    make_shared<DynamicContextStrategy>(symm_context),
+    SGNSTokenLearnerType(
+      WordContextFactorization(vocab_dim, embedding_dim),
+      NegSamplingStrategy(ReservoirSampler<long>(NEG_SAMPLING_TABLE_SIZE)),
+      SpaceSavingLanguageModel(vocab_dim, subsample_threshold),
+      SGD(vocab_dim, tau, kappa, RHO_LOWER_BOUND_FACTOR * kappa)
+    ),
+    DynamicContextStrategy(symm_context),
     neg_samples
   );
+  SpaceSavingLanguageModel& language_model(sentence_learner.token_learner.language_model);
+  NegSamplingStrategy& neg_sampling_strategy(sentence_learner.token_learner.neg_sampling_strategy);
+  SGD& sgd(sentence_learner.token_learner.sgd);
 
   info(__func__, "training ...\n");
   size_t words_seen = 0, prev_words_seen = 0;
@@ -164,21 +157,20 @@ int main(int argc, char **argv) {
     vector<string> sentence(reader.next());
 
     for (auto it = sentence.begin(); it != sentence.end(); ++it) {
-      const pair<long,string> ejectee = language_model->increment(*it);
+      const pair<long,string> ejectee = language_model.increment(*it);
       const long ejectee_idx = ejectee.first;
       if (ejectee_idx >= 0) {
-        token_learner->reset_word(ejectee_idx);
+        sentence_learner.token_learner.reset_word(ejectee_idx);
       }
-      neg_sampling_strategy->step(
-        *language_model, language_model->lookup(*it));
+      neg_sampling_strategy.step(language_model, language_model.lookup(*it));
     }
 
     vector<long> word_ids;
     word_ids.reserve(sentence.size());
     for (auto it = sentence.begin(); it != sentence.end(); ++it) {
-      long word_id = language_model->lookup(*it);
+      long word_id = language_model.lookup(*it);
       if (word_id >= 0) {
-        if (language_model->subsample(word_id)) {
+        if (language_model.subsample(word_id)) {
           word_ids.push_back(word_id);
         }
         ++words_seen;
@@ -189,7 +181,7 @@ int main(int argc, char **argv) {
 
     for (size_t input_word_pos = 0; input_word_pos < word_ids.size();
          ++input_word_pos) {
-      sgd->step(word_ids[input_word_pos]);
+      sgd.step(word_ids[input_word_pos]);
     }
 
     time_t now = time(NULL);

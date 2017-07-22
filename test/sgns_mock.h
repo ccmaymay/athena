@@ -10,6 +10,9 @@
 
 class MockSGNSTokenLearner {
   public:
+    MockSGNSTokenLearner() { }
+    MockSGNSTokenLearner(MockSGNSTokenLearner&& other) { }
+
     MOCK_METHOD1(reset_word, void (long word_idx));
     MOCK_METHOD3(token_train, void (size_t target_word_idx,
                                     size_t context_word_idx,
@@ -33,6 +36,9 @@ class MockSGNSTokenLearner {
 
 class MockSGNSSentenceLearner {
   public:
+    MockSGNSSentenceLearner() { }
+    MockSGNSSentenceLearner(MockSGNSSentenceLearner&& other) { }
+
     MOCK_METHOD1(sentence_train, void (const std::vector<std::string>& words));
 
     MOCK_CONST_METHOD1(serialize, void (std::ostream& stream));
