@@ -44,10 +44,10 @@ class SGNSTokenLearner {
             language_model(std::move(language_model_)),
             sgd(std::move(sgd_)) { }
     void reset_word(long word_idx);
-    void token_train(size_t target_word_idx, size_t context_word_idx,
+    void token_train(size_t input_word_idx, size_t output_word_idx,
                      size_t neg_samples);
-    float compute_gradient_coeff(long target_word_idx,
-                                 long context_word_idx,
+    float compute_gradient_coeff(long input_word_idx,
+                                 long output_word_idx,
                                  bool negative_sample);
     float compute_similarity(size_t word1_idx, size_t word2_idx);
     long find_nearest_neighbor_idx(size_t word_idx);
@@ -63,11 +63,6 @@ class SGNSTokenLearner {
 
     SGNSTokenLearner(SGNSTokenLearner<LanguageModel,SamplingStrategy,SGDType>&& other) = default;
     SGNSTokenLearner(const SGNSTokenLearner<LanguageModel,SamplingStrategy,SGDType>& other) = default;
-
-  private:
-    void _context_word_gradient(long target_word, long context_word);
-    void _neg_sample_word_gradient(long target_word, long neg_sample_word);
-    void _predicted_word_gradient(long target_word, long predicted_word);
 };
 
 
@@ -135,15 +130,15 @@ long SGNSTokenLearner<LanguageModel,SamplingStrategy,SGDType>::find_context_near
     // should we try to take a MAP estimate here?
     float log_prob_ctx_given_candidate = 0;
     for (size_t i = 0; i < left_context + 1 + right_context; ++i) {
-      // for all context (output) words...
+      // for all output words...
       if (i != left_context) {
-        const long context_word_idx = word_ids[i];
-        if (context_word_idx >= 0) {
+        const long output_word_idx = word_ids[i];
+        if (output_word_idx >= 0) {
           log_prob_ctx_given_candidate += fast_sigmoid(
             cblas_sdot(
               factorization.get_embedding_dim(),
               factorization.get_word_embedding(candidate_word_idx), 1,
-              factorization.get_context_embedding(context_word_idx), 1
+              factorization.get_context_embedding(output_word_idx), 1
             )
           );
         }
@@ -198,13 +193,13 @@ long SGNSTokenLearner<LanguageModel,SamplingStrategy,SGDType>::find_nearest_neig
 }
 
 template <class LanguageModel, class SamplingStrategy, class SGDType>
-float SGNSTokenLearner<LanguageModel,SamplingStrategy,SGDType>::compute_gradient_coeff(long target_word_idx,
-                                           long context_word_idx,
+float SGNSTokenLearner<LanguageModel,SamplingStrategy,SGDType>::compute_gradient_coeff(long input_word_idx,
+                                           long output_word_idx,
                                            bool negative_sample) {
   return (negative_sample ? 0 : 1) - fast_sigmoid(cblas_sdot(
     factorization.get_embedding_dim(),
-    factorization.get_word_embedding(target_word_idx), 1,
-    factorization.get_context_embedding(context_word_idx), 1
+    factorization.get_word_embedding(input_word_idx), 1,
+    factorization.get_context_embedding(output_word_idx), 1
   ));
 }
 
@@ -220,62 +215,62 @@ bool SGNSTokenLearner<LanguageModel,SamplingStrategy,SGDType>::context_contains_
 }
 
 template <class LanguageModel, class SamplingStrategy, class SGDType>
-void SGNSTokenLearner<LanguageModel,SamplingStrategy,SGDType>::token_train(size_t target_word_idx,
-                                     size_t context_word_idx,
+void SGNSTokenLearner<LanguageModel,SamplingStrategy,SGDType>::token_train(size_t input_word_idx,
+                                     size_t output_word_idx,
                                      size_t neg_samples) {
-  // initialize target (input) word gradient
-  AlignedVector target_word_gradient(
+  // initialize input word gradient
+  AlignedVector input_word_gradient(
     factorization.get_embedding_dim());
-  memset(target_word_gradient.data(), 0,
+  memset(input_word_gradient.data(), 0,
     sizeof(float) * factorization.get_embedding_dim());
 
-  // compute contribution of context (output) word to target (input)
-  // word gradient, take context word gradient step
-  const float coeff = compute_gradient_coeff(target_word_idx,
-                                              context_word_idx, false);
+  // compute contribution of output word to input
+  // word gradient, take output word gradient step
+  const float coeff = compute_gradient_coeff(input_word_idx,
+                                              output_word_idx, false);
   cblas_saxpy(
     factorization.get_embedding_dim(),
     coeff,
-    factorization.get_context_embedding(context_word_idx), 1,
-    target_word_gradient.data(), 1
+    factorization.get_context_embedding(output_word_idx), 1,
+    input_word_gradient.data(), 1
   );
   sgd.scaled_gradient_update(
-    context_word_idx,
+    output_word_idx,
     factorization.get_embedding_dim(),
-    factorization.get_word_embedding(target_word_idx),
-    factorization.get_context_embedding(context_word_idx),
+    factorization.get_word_embedding(input_word_idx),
+    factorization.get_context_embedding(output_word_idx),
     coeff
   );
 
   for (size_t j = 0; j < neg_samples; ++j) {
-    // compute contribution of neg-sample word to target (input) word
+    // compute contribution of neg-sample word to input word
     // gradient, take neg-sample word gradient step
     const long neg_sample_word_idx =
       neg_sampling_strategy.sample_idx(language_model);
 
-    const float coeff = compute_gradient_coeff(target_word_idx,
+    const float coeff = compute_gradient_coeff(input_word_idx,
                                                neg_sample_word_idx, true);
     cblas_saxpy(
       factorization.get_embedding_dim(),
       coeff,
       factorization.get_context_embedding(neg_sample_word_idx), 1,
-      target_word_gradient.data(), 1
+      input_word_gradient.data(), 1
     );
     sgd.scaled_gradient_update(
       neg_sample_word_idx,
       factorization.get_embedding_dim(),
-      factorization.get_word_embedding(target_word_idx),
+      factorization.get_word_embedding(input_word_idx),
       factorization.get_context_embedding(neg_sample_word_idx),
       coeff
     );
   }
 
-  // take target (input) word gradient step
+  // take input word gradient step
   sgd.gradient_update(
-    target_word_idx,
+    input_word_idx,
     factorization.get_embedding_dim(),
-    target_word_gradient.data(),
-    factorization.get_word_embedding(target_word_idx)
+    input_word_gradient.data(),
+    factorization.get_word_embedding(input_word_idx)
   );
 }
 
@@ -334,7 +329,6 @@ void SGNSSentenceLearner<SGNSTokenLearnerType,ContextStrategy>::sentence_train(
 
     // train on current context
     for (size_t output_word_pos = ctx_start; output_word_pos < ctx_end; ++output_word_pos) {
-      // for all context (output) words...
       if (output_word_pos != input_word_pos) {
         token_learner.token_train(word_ids[input_word_pos],
                                     word_ids[output_word_pos], neg_samples);
