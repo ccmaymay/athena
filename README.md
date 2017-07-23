@@ -50,20 +50,19 @@ Now to run the tests do: `make test`
 
 ## References
 
-1.  [Mitzenmacher, Steinke, and Thaler (2001) (Section 2)](http://arxiv.org/abs/1102.5540)
-2.  [Řehůřek gensim word2vec implementation article (part 1)](http://rare-technologies.com/deep-learning-with-word2vec-and-gensim/)
-3.  [Řehůřek gensim word2vec implementation article (part 2)](http://rare-technologies.com/word2vec-in-python-part-two-optimizing/)
-4.  [Řehůřek gensim word2vec implementation article (part 3)](http://rare-technologies.com/parallelizing-word2vec-in-python/)
-5.  [Řehůřek gensim word2vec tutorial](http://rare-technologies.com/word2vec-tutorial/)
-6.  [Knoll space saving implementation article](http://byronknoll.blogspot.com/2013/01/space-saving-algorithm.html)
-7.  [Crammer, Dekel, Keshet, Shalev-Shwartz, and Singer (2006)](http://jmlr.csail.mit.edu/papers/volume7/crammer06a/crammer06a.pdf)
-8.  [Mikolov, Sutskever, Chen, Corrado, and Dean (2013)](https://papers.nips.cc/paper/5021-distributed-representations-of-words-and-phrases-and-their-compositionality.pdf)
-9.  [D'Elia (2013) (Section 3)](http://www.dis.uniroma1.it/~delia/files/docs/spacesaving-report.pdf)
+1.  [Levy, Goldberg, and Dagan (2015)](http://www.aclweb.org/anthology/Q15-1016)
+2.  [Walker (1977)](http://dl.acm.org/citation.cfm?doid=355744.355749)
+3.  [Wikipedia alias method article](https://en.wikipedia.org/wiki/Alias_method)
+4.  [Vitter (1985)](https://www.cs.umd.edu/~samir/498/vitter.pdf)
+5.  [Metwally, Agrawal, and El Abaddi (2005)](http://www.cse.ust.hk/~raywong/comp5331/References/EfficientComputationOfFrequentAndTop-kElementsInDataStreams.pdf)
+6.  [Cormode (2009) slides](http://dmac.rutgers.edu/Workshops/WGUnifyingTheory/Slides/cormode.pdf)
+7.  [Knoll space saving implementation article](http://byronknoll.blogspot.com/2013/01/space-saving-algorithm.html)
+8.  [D'Elia (2013) (Section 3)](http://www.dis.uniroma1.it/~delia/files/docs/spacesaving-report.pdf)
+9.  [Mikolov, Sutskever, Chen, Corrado, and Dean (2013)](https://papers.nips.cc/paper/5021-distributed-representations-of-words-and-phrases-and-their-compositionality.pdf)
 10. [Mikolov, Sutskever, Chen, Corrado, and Dean (2013) word2vec implementation](https://code.google.com/archive/p/word2vec/)
-11. [Metwally, Agrawal, and El Abaddi (2005)](http://www.cse.ust.hk/~raywong/comp5331/References/EfficientComputationOfFrequentAndTop-kElementsInDataStreams.pdf)
-12. [Cormode (2009) slides](http://dmac.rutgers.edu/Workshops/WGUnifyingTheory/Slides/cormode.pdf)
-13. [Levy, Goldberg, and Dagan (2015)](http://www.aclweb.org/anthology/Q15-1016)
-14. [Rastogi, Costello, Levin LSH implementation](https://gitlab.hltcoe.jhu.edu/prastog3/lsh)
+11. [Řehůřek gensim word2vec implementation article (part 1)](http://rare-technologies.com/deep-learning-with-word2vec-and-gensim/)
+12. [Řehůřek gensim word2vec implementation article (part 2)](http://rare-technologies.com/word2vec-in-python-part-two-optimizing/)
+13. [Řehůřek gensim word2vec implementation article (part 3)](http://rare-technologies.com/parallelizing-word2vec-in-python/)
 
 ## License
 
