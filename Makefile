@@ -80,6 +80,8 @@ MAIN_BUILD_DIR := $(BUILD_BASE_DIR)/bin
 MAIN_SOURCES := \
     $(SRC_DIR)/spacesaving-word2vec-train.cpp \
     $(SRC_DIR)/spacesaving-word2vec-print.cpp \
+    $(SRC_DIR)/word2vec-alias-train.cpp \
+    $(SRC_DIR)/word2vec-alias-print.cpp \
     $(SRC_DIR)/word2vec-train.cpp \
     $(SRC_DIR)/word2vec-print.cpp \
     $(SRC_DIR)/spacesaving-lm-train.cpp \

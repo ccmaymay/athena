@@ -211,6 +211,27 @@ class EmpiricalSamplingStrategyTest: public ::testing::Test {
     virtual void TearDown() { }
 };
 
+class EmpiricalSamplingStrategyNoRefreshTest: public ::testing::Test {
+  protected:
+    std::shared_ptr<MockLanguageModel> lm;
+    std::shared_ptr<EmpiricalSamplingStrategy<MockLanguageModel, MockCountNormalizer> > strategy;
+
+    virtual void SetUp() {
+      lm = std::make_shared<MockLanguageModel>();
+      const std::vector<size_t> _counts = {2, 2, 3};
+      EXPECT_CALL(*lm, size()).WillRepeatedly(Return(3));
+      EXPECT_CALL(*lm, counts()).WillRepeatedly(Return(_counts));
+
+      strategy = std::make_shared<EmpiricalSamplingStrategy<MockLanguageModel, MockCountNormalizer> >(MockCountNormalizer());
+
+      const std::vector<float> _normalized_counts = {2./7., 2./7., 3./7.};
+      EXPECT_CALL(strategy->normalizer, normalize(_counts)).
+        WillRepeatedly(Return(_normalized_counts));
+    }
+
+    virtual void TearDown() { }
+};
+
 class EmpiricalSamplingStrategySerializationTest: public ::testing::Test {
   protected:
     std::shared_ptr<EmpiricalSamplingStrategy<MockLanguageModel> > strategy;

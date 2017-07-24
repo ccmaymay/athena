@@ -262,6 +262,19 @@ TEST_F(EmpiricalSamplingStrategyTest, step) {
   for (size_t i = 0; i < num_trials; ++i) { EXPECT_EQ(1, strategy->sample_idx(*lm)); }
 }
 
+TEST_F(EmpiricalSamplingStrategyNoRefreshTest, step) {
+  size_t num_trials = 100;
+  vector<size_t> _counts = {7, 47, 9};
+  EXPECT_CALL(*lm, counts()).Times(1).WillRepeatedly(Return(_counts));
+  vector<float> _normalized_counts = {0, 0, 1};
+  EXPECT_CALL(strategy->normalizer, normalize(_counts)).
+    Times(1).WillRepeatedly(Return(_normalized_counts));
+
+  for (size_t i = 0; i < num_trials; ++i) {
+    strategy->step(*lm, 42);
+  }
+}
+
 TEST_F(EmpiricalSamplingStrategySerializationTest, serialization_fixed_point) {
   stringstream ostream;
   strategy->serialize(ostream);
