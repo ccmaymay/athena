@@ -79,7 +79,6 @@ class NaiveLanguageModel {
     void truncate(size_t max_size);
     // sort language model words by count (descending)
     void sort();
-    virtual ~NaiveLanguageModel() { }
 
     bool equals(const NaiveLanguageModel& other) const;
     void serialize(std::ostream& stream) const;
@@ -145,7 +144,6 @@ class SpaceSavingLanguageModel {
     // normalized frequency corresponding to word_idx)
     bool subsample(long ext_word_idx) const;
     void truncate(size_t max_size);
-    virtual ~SpaceSavingLanguageModel() { }
 
     bool equals(const SpaceSavingLanguageModel& other) const;
     void serialize(std::ostream& stream) const;
@@ -195,7 +193,6 @@ class WordContextFactorization {
     size_t get_vocab_dim() const;
     float* get_word_embedding(size_t word_idx);
     float* get_context_embedding(size_t word_idx);
-    virtual ~WordContextFactorization() { }
 
     bool equals(const WordContextFactorization& other) const;
     void serialize(std::ostream& stream) const;
@@ -234,7 +231,6 @@ class SGD {
     void scaled_gradient_update(size_t dim, size_t n, const float *g,
                                         float *x, float alpha);
     void reset(size_t dim);
-    virtual ~SGD() { }
 
     bool equals(const SGD& other) const;
     void serialize(std::ostream& stream) const;
@@ -277,8 +273,6 @@ class UniformSamplingStrategy {
     UniformSamplingStrategy(UniformSamplingStrategy&& other) = default;
     UniformSamplingStrategy(const UniformSamplingStrategy& other) = default;
 
-    virtual ~UniformSamplingStrategy() { }
-
     bool equals(const UniformSamplingStrategy& other) const { return true; }
     void serialize(std::ostream& stream) const { }
     static UniformSamplingStrategy<LanguageModel> deserialize(std::istream& stream) {
@@ -318,7 +312,6 @@ class EmpiricalSamplingStrategy {
     void
       step(const LanguageModel& language_model, size_t word_idx);
     long sample_idx(const LanguageModel& language_model);
-    virtual ~EmpiricalSamplingStrategy() { }
 
     bool equals(const EmpiricalSamplingStrategy& other) const;
     void serialize(std::ostream& stream) const;
@@ -362,7 +355,6 @@ class ReservoirSamplingStrategy {
     long sample_idx(const LanguageModel& language_model) {
       return reservoir_sampler.sample();
     }
-    virtual ~ReservoirSamplingStrategy() { }
 
     bool equals(const ReservoirSamplingStrategy& other) const;
     void serialize(std::ostream& stream) const;
@@ -393,8 +385,6 @@ class DiscreteSamplingStrategy {
     DiscreteSamplingStrategy(DiscreteSamplingStrategy&& other) = default;
     DiscreteSamplingStrategy(const DiscreteSamplingStrategy& other) = default;
 
-    virtual ~DiscreteSamplingStrategy() { }
-
     bool equals(const DiscreteSamplingStrategy& other) const;
     void serialize(std::ostream& stream) const;
     static DiscreteSamplingStrategy<LanguageModel, DiscretizationType> deserialize(std::istream& stream);
@@ -415,7 +405,6 @@ class StaticContextStrategy {
     // left and right (respectively); return pair (0,0) if no context
     std::pair<size_t,size_t> size(size_t avail_left,
                                   size_t avail_right) const;
-    virtual ~StaticContextStrategy() { }
     bool equals(const StaticContextStrategy& other) const;
     void serialize(std::ostream& stream) const;
     static StaticContextStrategy deserialize(std::istream& stream);
@@ -438,7 +427,6 @@ class DynamicContextStrategy {
     // left and right (respectively); return pair (0,0) if no context
     std::pair<size_t,size_t> size(size_t avail_left,
                                   size_t avail_right) const;
-    virtual ~DynamicContextStrategy() { }
     bool equals(const DynamicContextStrategy& other) const;
     void serialize(std::ostream& stream) const;
     static DynamicContextStrategy deserialize(std::istream& stream);

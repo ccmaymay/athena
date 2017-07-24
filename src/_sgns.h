@@ -90,9 +90,8 @@ class SGNSSentenceLearner {
     void sentence_train(const std::vector<long>& word_ids);
     ~SGNSSentenceLearner() { }
 
-    virtual bool
-      equals(const SGNSSentenceLearner<SGNSTokenLearnerType,ContextStrategy>& other) const;
-    virtual void serialize(std::ostream& stream) const;
+    bool equals(const SGNSSentenceLearner<SGNSTokenLearnerType,ContextStrategy>& other) const;
+    void serialize(std::ostream& stream) const;
     static SGNSSentenceLearner<SGNSTokenLearnerType,ContextStrategy>
       deserialize(std::istream& stream);
 

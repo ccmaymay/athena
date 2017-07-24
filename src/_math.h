@@ -50,7 +50,7 @@ class AlignedVector {
     const float& operator[](size_t i) const { return _data[i]; }
     float& operator[](size_t i) { return _data[i]; }
     void resize(size_t size);
-    virtual ~AlignedVector();
+    ~AlignedVector();
 
     AlignedVector(AlignedVector&& other);
     AlignedVector(const AlignedVector& other);
@@ -128,7 +128,6 @@ class ExponentCountNormalizer {
     ExponentCountNormalizer(float exponent = 1, float offset = 0);
     std::vector<float> normalize(const std::vector<size_t>&
                                             counts) const;
-    virtual ~ExponentCountNormalizer() { }
 
     ExponentCountNormalizer(ExponentCountNormalizer&& other) = default;
     ExponentCountNormalizer(const ExponentCountNormalizer& other) = default;
@@ -146,7 +145,6 @@ class NaiveSampler {
   public:
     NaiveSampler(const std::vector<float>& probabilities);
     size_t sample() const;
-    virtual ~NaiveSampler() { }
 
     bool equals(const NaiveSampler& other) const;
     void serialize(std::ostream& stream) const;
@@ -169,7 +167,6 @@ class AliasSampler {
   public:
     AliasSampler(const std::vector<float>& probabilities);
     size_t sample() const;
-    virtual ~AliasSampler() { }
 
     bool equals(const AliasSampler& other) const;
     void serialize(std::ostream& stream) const;
@@ -210,7 +207,6 @@ class ReservoirSampler {
     size_t filled_size() const { return _filled_size; }
     T insert(T val);
     void clear();
-    virtual ~ReservoirSampler() { }
 
     bool equals(const ReservoirSampler<T>& other) const;
     void serialize(std::ostream& stream) const;
@@ -239,7 +235,6 @@ class Discretization {
     }
     const long& operator[](size_t idx) const { return _samples[idx]; }
     size_t num_samples() const { return _samples.size(); }
-    virtual ~Discretization() { }
 
     bool equals(const Discretization& other) const;
     void serialize(std::ostream& stream) const;

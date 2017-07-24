@@ -19,7 +19,7 @@ struct Word2VecModel {
   std::vector<std::string> vocab;
   std::vector<float> word_embeddings;
 
-  virtual void serialize(std::ostream& stream) const;
+  void serialize(std::ostream& stream) const;
   static std::shared_ptr<Word2VecModel> deserialize(std::istream& stream);
 };
 
