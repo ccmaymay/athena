@@ -39,7 +39,7 @@ typedef std::linear_congruential_engine<size_t,25214903917ull,11ull,1ull<<48>
 
 // Wrapper on cache-aligned floating-point vector.
 
-class AlignedVector {
+class AlignedVector final {
   float* _data;
   size_t _size;
 
@@ -120,7 +120,7 @@ void sample_centered_uniform_vector(size_t n, T *z) {
 }
 
 
-class ExponentCountNormalizer {
+class ExponentCountNormalizer final {
   float _exponent;
   float _offset;
 
@@ -138,7 +138,7 @@ class ExponentCountNormalizer {
 };
 
 
-class NaiveSampler {
+class NaiveSampler final {
   size_t _size;
   std::vector<float> _probability_table;
 
@@ -159,7 +159,7 @@ class NaiveSampler {
 };
 
 
-class AliasSampler {
+class AliasSampler final {
   size_t _size;
   std::vector<size_t> _alias_table;
   std::vector<float> _probability_table;
@@ -190,7 +190,7 @@ template <typename T>
 class ReservoirSampler;
 
 template <typename T>
-class ReservoirSampler {
+class ReservoirSampler final {
   size_t _size, _filled_size, _count;
   std::vector<T> _reservoir;
 
@@ -223,7 +223,7 @@ class ReservoirSampler {
 };
 
 
-class Discretization {
+class Discretization final {
   std::vector<long> _samples;
 
   public:

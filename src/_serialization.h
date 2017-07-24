@@ -207,7 +207,7 @@ struct Serializer<std::vector<T> > {
 
 
 template <class T>
-class FileSerializer {
+class FileSerializer final {
   std::string _path;
 
   public:

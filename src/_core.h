@@ -44,7 +44,7 @@ bool pair_second_cmp(std::pair<T,U> x, std::pair<T,U> y) {
 
 // Language model implemented naively
 
-class NaiveLanguageModel {
+class NaiveLanguageModel final {
   float _subsample_threshold;
   size_t _size;
   size_t _total;
@@ -103,7 +103,7 @@ class NaiveLanguageModel {
 
 // Language model implemented on SpaceSaving approximate counter.
 
-class SpaceSavingLanguageModel {
+class SpaceSavingLanguageModel final {
   float _subsample_threshold;
   size_t _num_counters;
   size_t _size;
@@ -182,7 +182,7 @@ class SpaceSavingLanguageModel {
 
 // Word-context matrix factorization model.
 
-class WordContextFactorization {
+class WordContextFactorization final {
   size_t _vocab_dim, _embedding_dim, _actual_embedding_dim;
   AlignedVector _word_embeddings, _context_embeddings;
 
@@ -215,7 +215,7 @@ class WordContextFactorization {
 
 // Stochastic gradient descent parametrization and state.
 
-class SGD {
+class SGD final {
   size_t _dimension;
   float _tau, _kappa, _rho_lower_bound;
   std::vector<float> _rho;
@@ -262,7 +262,7 @@ template <class LanguageModel>
 class UniformSamplingStrategy;
 
 template <class LanguageModel>
-class UniformSamplingStrategy {
+class UniformSamplingStrategy final {
   public:
     UniformSamplingStrategy() { }
     // sample from uniform distribution
@@ -287,7 +287,7 @@ template <class LanguageModel, class CountNormalizer = ExponentCountNormalizer>
 class EmpiricalSamplingStrategy;
 
 template <class LanguageModel, class CountNormalizer>
-class EmpiricalSamplingStrategy {
+class EmpiricalSamplingStrategy final {
   size_t _refresh_interval;
   size_t _refresh_burn_in;
 
@@ -340,7 +340,7 @@ template <class LanguageModel, class ReservoirSamplerType = ReservoirSampler<lon
 class ReservoirSamplingStrategy;
 
 template <class LanguageModel, class ReservoirSamplerType>
-class ReservoirSamplingStrategy {
+class ReservoirSamplingStrategy final {
   public:
     ReservoirSamplerType reservoir_sampler;
 
@@ -371,7 +371,7 @@ template <class LanguageModel, class DiscretizationType = Discretization>
 class DiscreteSamplingStrategy;
 
 template <class LanguageModel, class DiscretizationType>
-class DiscreteSamplingStrategy {
+class DiscreteSamplingStrategy final {
   public:
     DiscretizationType discretization;
 
@@ -393,7 +393,7 @@ class DiscreteSamplingStrategy {
 
 // Static context strategy
 
-class StaticContextStrategy {
+class StaticContextStrategy final {
   size_t _symm_context;
 
   public:
@@ -415,7 +415,7 @@ class StaticContextStrategy {
 
 // Dynamic context strategy
 
-class DynamicContextStrategy {
+class DynamicContextStrategy final {
   size_t _symm_context;
 
   public:

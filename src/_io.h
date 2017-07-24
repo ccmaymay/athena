@@ -12,7 +12,7 @@
 void stream_ready_or_throw(std::ios& stream);
 
 
-class SentenceReader {
+class SentenceReader final {
   std::istream& _f;
   size_t _sentence_limit;
   bool _initialized, _has_next_sentence;

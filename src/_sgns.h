@@ -27,7 +27,7 @@ template <class LanguageModel, class SamplingStrategy, class SGDType = SGD>
 class SGNSTokenLearner;
 
 template <class LanguageModel, class SamplingStrategy, class SGDType>
-class SGNSTokenLearner {
+class SGNSTokenLearner final {
   public:
     WordContextFactorization factorization;
     SamplingStrategy neg_sampling_strategy;
@@ -74,7 +74,7 @@ template <class SGNSTokenLearnerType, class ContextStrategy = DynamicContextStra
 class SGNSSentenceLearner;
 
 template <class SGNSTokenLearnerType, class ContextStrategy>
-class SGNSSentenceLearner {
+class SGNSSentenceLearner final {
   public:
     SGNSTokenLearnerType token_learner;
     ContextStrategy ctx_strategy;
